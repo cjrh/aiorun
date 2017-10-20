@@ -15,6 +15,7 @@ from typing import Optional, Coroutine, Callable
 
 
 __all__ = ['run']
+__version__ = '2017.10.1'
 logger = logging.getLogger('aiorun')
 
 
