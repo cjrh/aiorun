@@ -61,8 +61,8 @@ again. So, if you use ``aiorun`` this is what **you** need to remember:
 - When a shutdown signal is received, **all** currently-pending tasks
   will have ``CancelledError`` raised internally. It's up to you whether
   you want to handle this in a ``try/except`` or not.
-- Try to have executor job be shortish, since shutdown will wait for them
+- Try to have executor jobs be shortish, since shutdown will wait for them
   to finish. If you need a long-running thread or process tasks, use
-  a dedicated job and set ``daemon=True`` instead.
+  a dedicated thread/subprocess and set ``daemon=True`` instead.
 
 There's not much else to know.
