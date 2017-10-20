@@ -1,3 +1,4 @@
+import logging
 from asyncio import (
     get_event_loop,
     AbstractEventLoop,
@@ -5,35 +6,52 @@ from asyncio import (
     gather,
     CancelledError,
 )
-from concurrent.futures import ThreadPoolExecutor as Executor
+from concurrent.futures import Executor, ThreadPoolExecutor
 from signal import SIGTERM, SIGINT
-from typing import Optional, Coroutine
+from typing import Optional, Coroutine, Callable
 
 
 __all__ = ['run']
+logger = logging.getLogger('aiorun')
 
 
 def shutdown():
+    logger.debug('Entering shutdown handler')
     loop: AbstractEventLoop = get_event_loop()
     loop.remove_signal_handler(SIGTERM)
     loop.add_signal_handler(SIGINT, lambda: None)
+    logger.critical('Stopping the loop')
     loop.stop()
 
 
-def run(coro: Optional[Coroutine]):
+def run(coro: Optional[Coroutine], *,
+        shutdown_handler: Callable[[], None] = shutdown,
+        executor_workers: int = 10,
+        executor: Optional[Executor] = None) -> None:
+    logger.debug('Entering run()')
     loop: AbstractEventLoop = get_event_loop()
     if coro:
         loop.create_task(coro)
-    loop.add_signal_handler(SIGINT, shutdown)
-    executor = Executor(max_workers=10)
+    loop.add_signal_handler(SIGINT, shutdown_handler)
+    loop.add_signal_handler(SIGTERM, shutdown_handler)
+    if not executor:
+        logger.debug('Creating default executor')
+        executor = ThreadPoolExecutor(max_workers=executor_workers)
     loop.set_default_executor(executor)
+    logger.critical('Running forever.')
     loop.run_forever()
+    logger.critical('Entering shutdown phase.')
     tasks = Task.all_tasks()
     group = gather(*tasks)
+    logger.critical('Cancelling pending tasks.')
     group.cancel()
     try:
+        logger.critical('Running pending tasks till complete')
         loop.run_until_complete(group)
     except CancelledError:
         pass
+    logger.critical('Waiting for executor shutdown.')
     executor.shutdown(wait=True)
+    logger.critical('Closing the loop.')
     loop.close()
+    logger.critical('Leaving. Bye!')
