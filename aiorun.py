@@ -20,7 +20,7 @@ logger = logging.getLogger('aiorun')
 
 def shutdown():
     logger.debug('Entering shutdown handler')
-    loop: AbstractEventLoop = get_event_loop()
+    loop = get_event_loop()
     loop.remove_signal_handler(SIGTERM)
     loop.add_signal_handler(SIGINT, lambda: None)
     logger.critical('Stopping the loop')
@@ -32,7 +32,7 @@ def run(coro: Optional[Coroutine] = None, *,
         executor_workers: int = 10,
         executor: Optional[Executor] = None) -> None:
     logger.debug('Entering run()')
-    loop: AbstractEventLoop = new_event_loop()
+    loop = new_event_loop()
     set_event_loop(loop)
     if coro:
         loop.create_task(coro)
