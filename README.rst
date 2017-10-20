@@ -43,16 +43,16 @@ of your ``asyncio``-based application.
 
 So what the heck does ``run()`` do exactly?? It:
 
-- Creates a `Task` for the given coroutine (schedules it on the
-  event loop)
-- Calls ``loop.run_forever``
-- Adds default (and smart) signal handlers for both ``SIGINT``
-  and ``SIGTERM`` that will stop the loop.
-- Gathers all outstanding tasks
-- Cancels them using ``task.cancel()`` (you can choose whether or
-  not to handle ``CancelledError`` in your coroutines)
-- Waits for the executor to complete shutdown
-- Finally closes the loop.
+- creates a `Task` for the given coroutine (schedules it on the
+  event loop),
+- calls ``loop.run_forever()``,
+- adds default (and smart) signal handlers for both ``SIGINT``
+  and ``SIGTERM`` that will stop the loop, *and then it...*
+- gathers all outstanding tasks,
+- cancels them using ``task.cancel()`` (you can choose whether or
+  not to handle ``CancelledError`` in your coroutines),
+- waits for the executor to complete shutdown, and
+- finally closes the loop.
 
 All of this stuff is boilerplate that you will never have to write
 again. So, if you use ``aiorun`` this is what **you** need to remember:
