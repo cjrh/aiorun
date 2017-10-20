@@ -1,0 +1,3 @@
+- Optional entry point for "pre-run_forever" tasks, like TCP server start.
+- Might also need a hook for server shutdown, aka "wait_closed"? Hopefully
+this can just be done in application code.

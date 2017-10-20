@@ -24,4 +24,45 @@
 aiorun
 ======================
 
-<Text goes here.>
+Here's the big idea (how you use it):
+
+.. code-block:: python
+
+   import asyncio
+   from aiorun import run
+
+   async def main():
+       # Put your application code here
+       await asyncio.sleep(1.0)
+
+   if __name__ == '__main__':
+       run(main())
+
+This package provides a ``run()`` function as the starting point
+of your ``asyncio``-based application.
+
+So what the heck does ``run()`` do exactly?? It:
+
+- Creates a `Task` for the given coroutine (schedules it on the
+  event loop)
+- Calls ``loop.run_forever``
+- Adds default (and smart) signal handlers for both ``SIGINT``
+  and ``SIGTERM`` that will stop the loop.
+- Gathers all outstanding tasks
+- Cancels them using ``task.cancel()`` (you can choose whether or
+  not to handle ``CancelledError`` in your coroutines)
+- Waits for the executor to complete shutdown
+- Finally closes the loop.
+
+All of this stuff is boilerplate that you will never have to write
+again. So, if you use ``aiorun`` this is what **you** need to remember:
+
+- Spawn all your work from a single, starting coroutine
+- When a shutdown signal is received, **all** currently-pending tasks
+  will have ``CancelledError`` raised internally. It's up to you whether
+  you want to handle this in a ``try/except`` or not.
+- Try to have executor job be shortish, since shutdown will wait for them
+  to finish. If you need a long-running thread or process tasks, use
+  a dedicated job and set ``daemon=True`` instead.
+
+There's not much else to know.
