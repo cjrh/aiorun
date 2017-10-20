@@ -1,0 +1,11 @@
+[run]
+branch = True
+include =
+    aiorun.py
+    tests/*
+
+[report]
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+    if typing.TYPE_CHECKING:
