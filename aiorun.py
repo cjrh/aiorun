@@ -15,7 +15,7 @@ from typing import Optional, Coroutine, Callable
 
 
 __all__ = ['run']
-__version__ = '2017.10.1'
+__version__ = '2017.10.2'
 logger = logging.getLogger('aiorun')
 
 
@@ -29,12 +29,14 @@ def shutdown():
 
 
 def run(coro: Optional[Coroutine] = None, *,
+        loop: Optional[AbstractEventLoop] = None,
         shutdown_handler: Callable[[], None] = shutdown,
         executor_workers: int = 10,
         executor: Optional[Executor] = None) -> None:
     logger.debug('Entering run()')
-    loop = new_event_loop()
-    set_event_loop(loop)
+    if not loop:
+        loop = new_event_loop()
+        set_event_loop(loop)
     if coro:
         loop.create_task(coro)
     loop.add_signal_handler(SIGINT, shutdown_handler)
