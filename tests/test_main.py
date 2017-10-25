@@ -18,24 +18,32 @@ def kill(sig=SIGTERM, after=0.1):
     t.start()
 
 
+def newloop():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    return loop
+
+
 def test_sigterm():
     """Basic SIGTERM"""
     async def main():
         await asyncio.sleep(5.0)
 
     kill(SIGTERM)
-    run(main())
+    run(main(), loop=newloop())
 
 
 def test_no_coroutine():
     """Signal should still work without a main coroutine"""
     kill(SIGTERM)
+    newloop()
     run()
 
 
 def test_sigint():
     """Basic SIGINT"""
     kill(SIGINT)
+    newloop()
     run()
 
 
@@ -43,6 +51,7 @@ def test_exe():
     """Custom executor"""
     exe = ThreadPoolExecutor()
     kill(SIGTERM)
+    newloop()
     run(executor=exe)
 
 
@@ -56,4 +65,5 @@ def test_sigint_pause():
 
     kill(SIGINT, after=0.1)
     kill(SIGINT, after=0.15)
+    newloop()
     run(main())

@@ -15,7 +15,7 @@ from typing import Optional, Coroutine, Callable
 
 
 __all__ = ['run']
-__version__ = '2017.10.2'
+__version__ = '2017.10.3'
 logger = logging.getLogger('aiorun')
 
 
@@ -34,9 +34,7 @@ def run(coro: Optional[Coroutine] = None, *,
         executor_workers: int = 10,
         executor: Optional[Executor] = None) -> None:
     logger.debug('Entering run()')
-    if not loop:
-        loop = new_event_loop()
-        set_event_loop(loop)
+    loop = loop or get_event_loop()
     if coro:
         loop.create_task(coro)
     loop.add_signal_handler(SIGINT, shutdown_handler)
@@ -48,7 +46,7 @@ def run(coro: Optional[Coroutine] = None, *,
     logger.critical('Running forever.')
     loop.run_forever()
     logger.critical('Entering shutdown phase.')
-    tasks = Task.all_tasks()
+    tasks = Task.all_tasks(loop=loop)
     group = gather(*tasks)
     logger.critical('Cancelling pending tasks.')
     group.cancel()
