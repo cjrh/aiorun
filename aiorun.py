@@ -22,7 +22,7 @@ __version__ = '2017.10.4'
 logger = logging.getLogger('aiorun')
 
 
-_DO_NOT_CANCEL_COROS: Set = WeakSet()
+_DO_NOT_CANCEL_COROS = WeakSet()
 
 
 def shutdown_waits_for(coro, loop=None):
