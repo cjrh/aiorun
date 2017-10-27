@@ -41,14 +41,14 @@ Here's the big idea (how you use it):
 This package provides a ``run()`` function as the starting point
 of your ``asyncio``-based application.
 
-The `run()` function will handle **everything** that normally needs
+The ``run()`` function will handle **everything** that normally needs
 to be done during the shutdown sequence of the application.  All you
 need to do is write your coroutines and run them.
 
 So what the heck does ``run()`` do exactly?? It does these standard,
 idiomatic actions for asyncio apps:
 
-- creates a `Task` for the given coroutine (schedules it on the
+- creates a ``Task`` for the given coroutine (schedules it on the
   event loop),
 - calls ``loop.run_forever()``,
 - adds default (and smart) signal handlers for both ``SIGINT``
@@ -78,23 +78,23 @@ Smart shield for shutdown
 
 It's unusual, but sometimes you're going to want a coroutine to not get
 interrupted by cancellation *during the shutdown sequence*. You'll look in
-the official docs and find `asyncio.shield()`.
+the official docs and find ``asyncio.shield()``.
 
-The problem is that `shield()` doesn't work in shutdown scenarios because
-the protection offered by `shield()` only applies if the specific coroutine
-*inside which* the `shield()` is used, gets cancelled directly.
+The problem is that ``shield()`` doesn't work in shutdown scenarios because
+the protection offered by ``shield()`` only applies if the specific coroutine
+*inside which* the ``shield()`` is used, gets cancelled directly.
 
-If, however, you go through a conventional shutdown sequence (like `aiorun`
-is doing internally), you would call `tasks = all_tasks()`, followed by
-`group = gather(*tasks)`, and then `group.cancel()`, the *secret, inner*
-task that `shield()` silently creates internally will get cancelled, since
-it'll be includede in that `all_tasks()` call. It's not a very good shield
+If, however, you go through a conventional shutdown sequence (like ``aiorun``
+is doing internally), you would call ``tasks = all_tasks()``, followed by
+``group = gather(*tasks)``, and then ``group.cancel()``, the *secret, inner*
+task that ``shield()`` silently creates internally will get cancelled, since
+it'll be includede in that ``all_tasks()`` call. It's not a very good shield
 for the shutdown sequence.
 
-Therefore, we have a version of `shield()` that works better for us:
-`shutdown_waits_for()`.  If you've got a coroutine that must **not** be
+Therefore, we have a version of ``shield()`` that works better for us:
+``shutdown_waits_for()``. If you've got a coroutine that must **not** be
 cancelled during the shutdown sequence, just wrap it in
-`shutdown_waits_for()`!
+``shutdown_waits_for()``!
 
 Here's an example:
 
