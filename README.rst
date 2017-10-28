@@ -19,7 +19,6 @@
 .. image:: https://img.shields.io/badge/calver-YYYY.MM.MINOR-22bfda.svg
     :target: http://calver.org/
 
-**ALPHA**
 
 aiorun
 ======================
