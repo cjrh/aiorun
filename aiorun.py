@@ -111,7 +111,8 @@ def _shutdown(loop=None):
 
 def run(coro: Optional[Coroutine] = None, *,
         loop: Optional[AbstractEventLoop] = None,
-        shutdown_handler: Optional[Callable[[], None]] = None,
+        shutdown_handler: Optional[
+            Callable[[Optional[AbstractEventLoop]], None]] = None,
         executor_workers: int = 10,
         executor: Optional[Executor] = None) -> None:
     logger.debug('Entering run()')
