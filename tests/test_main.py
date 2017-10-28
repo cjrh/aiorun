@@ -190,7 +190,7 @@ def test_sigterm_enduring_indirect_cancel():
         CancelledError at the location of the caller for
         `shutdown_waits_for()`."""
         tasks = asyncio.Task.all_tasks()
-        for t in tasks:
+        for t in tasks:  # pragma: no cover
             if t._coro in _DO_NOT_CANCEL_COROS:
                 t.cancel()
                 return
