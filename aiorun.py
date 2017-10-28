@@ -7,12 +7,11 @@ from asyncio import (
     Task,
     gather,
     CancelledError,
-    Future,
-    sleep
+    Future
 )
 from concurrent.futures import Executor, ThreadPoolExecutor
 from signal import SIGTERM, SIGINT
-from typing import Optional, Coroutine, Callable, Set
+from typing import Optional, Coroutine, Callable
 from weakref import WeakSet
 from functools import partial
 
@@ -89,10 +88,11 @@ def shutdown_waits_for(coro, loop=None):
     # if they used `asyncio.ensure_future()` instead, since that can work
     # with futures. But I don't like ensure_future.)
     #
-    # (Another side note: I don't think we even need `create_task()` or
+    # (Another side note: You don't even need `create_task()` or
     # `ensure_future()`...If you don't want a result, you can just call
     # `shutdown_waits_for()` as a flat function call, no await or anything,
-    # and it should still work.
+    # and it should still work; unfortunately it causes a RuntimeWarning to
+    # tell you that ``inner()`` was never awaited :/
 
     async def inner():
         return await fut
@@ -111,7 +111,8 @@ def _shutdown(loop=None):
 
 def run(coro: Optional[Coroutine] = None, *,
         loop: Optional[AbstractEventLoop] = None,
-        shutdown_handler: Optional[Callable[[], None]] = None,
+        shutdown_handler: Optional[
+            Callable[[Optional[AbstractEventLoop]], None]] = None,
         executor_workers: int = 10,
         executor: Optional[Executor] = None) -> None:
     logger.debug('Entering run()')
@@ -146,6 +147,8 @@ def run(coro: Optional[Coroutine] = None, *,
         tasks = Task.all_tasks(loop=loop)
         do_not_cancel = set()
         for t in tasks:
+            # TODO: we don't need access to the coro. We could simply
+            # TODO: store the task itself in the weakset.
             if t._coro in _DO_NOT_CANCEL_COROS:
                 do_not_cancel.add(t)
 
@@ -161,7 +164,9 @@ def run(coro: Optional[Coroutine] = None, *,
     # Here's a protip: if you group a bunch of tasks, and some of them
     # get cancelled, and they DON'T HANDLE THE CANCELLATION, then the
     # raised CancelledError will bubble up to, and stop the
-    # loop.run_until_complete() line.
+    # loop.run_until_complete() line: meaning, not all the tasks in
+    # the gathered group will actually be complete. You need to
+    # enable this with the ``return_exceptions`` flag.
     group = gather(*tasks, *do_not_cancel, return_exceptions=True)
     logger.critical('Running pending tasks till complete')
     loop.run_until_complete(group)
