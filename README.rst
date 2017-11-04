@@ -85,7 +85,7 @@ the protection offered by ``shield()`` only applies if the specific coroutine
 *inside which* the ``shield()`` is used, gets cancelled directly.
 
 If, however, you go through a conventional shutdown sequence (like ``aiorun``
-is doing internally), you would call::
+is doing internally), you would call:
 
 - ``tasks = all_tasks()``, followed by
 - ``group = gather(*tasks)``, and then
