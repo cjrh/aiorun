@@ -169,6 +169,8 @@ def run(coro: Optional[Coroutine] = None, *,
     # enable this with the ``return_exceptions`` flag.
     group = gather(*tasks, *do_not_cancel, return_exceptions=True)
     logger.critical('Running pending tasks till complete')
+    # TODO: obtain all the results, and log any results that are exceptions
+    # other than CancelledError. Will be useful for troubleshooting.
     loop.run_until_complete(group)
 
     logger.critical('Waiting for executor shutdown.')
