@@ -51,11 +51,12 @@ idiomatic actions for asyncio apps:
   event loop),
 - calls ``loop.run_forever()``,
 - adds default (and smart) signal handlers for both ``SIGINT``
-  and ``SIGTERM`` that will stop the loop, if if the loop stops it...
-- ...gathers all outstanding tasks,
-- cancels them using ``task.cancel()``,
-- waits for the executor to complete shutdown, and
-- finally closes the loop.
+  and ``SIGTERM`` that will stop the loop;
+- and when the loop stops, the it will...
+- ...gather all outstanding tasks,
+- cancel them using ``task.cancel()``,
+- wait for the executor to complete shutdown, and
+- finally close the loop.
 
 All of this stuff is boilerplate that you will never have to write
 again. So, if you use ``aiorun`` this is what **you** need to remember:
@@ -84,11 +85,15 @@ the protection offered by ``shield()`` only applies if the specific coroutine
 *inside which* the ``shield()`` is used, gets cancelled directly.
 
 If, however, you go through a conventional shutdown sequence (like ``aiorun``
-is doing internally), you would call ``tasks = all_tasks()``, followed by
-``group = gather(*tasks)``, and then ``group.cancel()``, the *secret, inner*
-task that ``shield()`` silently creates internally will get cancelled, since
-it'll be includede in that ``all_tasks()`` call. It's not a very good shield
-for the shutdown sequence.
+is doing internally), you would call::
+
+- ``tasks = all_tasks()``, followed by
+- ``group = gather(*tasks)``, and then
+- ``group.cancel()``
+
+The problem is that `shield()` creates a *secret, inner*
+task that will also be captured in the ``all_tasks()`` call above, so it
+will also receive a cancellation signal just like everything else.
 
 Therefore, we have a version of ``shield()`` that works better for us:
 ``shutdown_waits_for()``. If you've got a coroutine that must **not** be
@@ -114,20 +119,20 @@ Here's an example:
 
     run(main())
 
-If you run this program, and do nothing, it'll run forever 'cause that's
-how `aiorun.run()` works.  You will see only `done!` printed in the output,
-and you'll have to send a signal or `CTRL-C` to stop it, at which point
-you'll see `oh noes!` printed.
+If you run this program and do nothing, it'll run forever ('cause that's
+how ``aiorun.run()`` works) and you'll see only ``done!`` printed in the output.
+You'll have to send a signal or ``CTRL-C`` to stop it, at which point
+you'll see ``oh noes!`` printed. So far no surprises.
 
-If, however, you hit `CTRL-C` *before* 60 seconds has passed, you will see
-`oh noes!` printed immediately, and then after 60 seconds since start, `done!`
-is printed, and thereafter the program exits.
+If, however, you hit ``CTRL-C`` *before* 60 seconds has passed, you will see
+``oh noes!`` printed immediately, and then after 60 seconds (since start),
+``done!`` is printed, and thereafter the program exits.
 
-Behind the scenes, *all tasks* would have been cancelled by `CTRL-C`,
-except ones wrapped in `shutdown_waits_for()` calls.  In this respect, it
-is loosely similar to `asyncio.shield()`, but with special applicability
-to our shutdown scenario in `aiorun()`.
+Behind the scenes, ``all tasks()`` would have been cancelled by ``CTRL-C``,
+except ones wrapped in ``shutdown_waits_for()`` calls.  In this respect, it
+is loosely similar to ``asyncio.shield()``, but with special applicability
+to our shutdown scenario in ``aiorun()``.
 
-Oh, and you can use `shutdown_waits_for()` as if it were `asyncio.shield()`
-too. For that use-case it works the same.  If you're using `aiorun`, there
-is no reason to use `shield()`.
+Oh, and you can use ``shutdown_waits_for()`` as if it were ``asyncio.shield()``
+too. For that use-case it works the same.  If you're using ``aiorun``, there
+is no reason to use ``shield()``.
