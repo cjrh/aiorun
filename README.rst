@@ -91,7 +91,7 @@ is doing internally), you would call:
 - ``group = gather(*tasks)``, and then
 - ``group.cancel()``
 
-The problem is that `shield()` creates a *secret, inner*
+The problem is that ```shield()`` creates a *secret, inner*
 task that will also be captured in the ``all_tasks()`` call above, so it
 will also receive a cancellation signal just like everything else.
 
