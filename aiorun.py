@@ -17,7 +17,7 @@ from functools import partial
 
 
 __all__ = ['run', 'shutdown_waits_for']
-__version__ = '2017.10.5'
+__version__ = '2017.11.1'
 logger = logging.getLogger('aiorun')
 
 

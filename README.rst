@@ -38,7 +38,12 @@ Here's the big idea (how you use it):
        run(main())
 
 This package provides a ``run()`` function as the starting point
-of your ``asyncio``-based application.
+of your ``asyncio``-based application. The ``run()`` function will
+run forever. If you want to shut down when ``main()`` completes, just
+call ``loop.stop()`` inside it: that will initiate shutdown.
+
+Why?
+----
 
 The ``run()`` function will handle **everything** that normally needs
 to be done during the shutdown sequence of the application.  All you
@@ -64,7 +69,8 @@ again. So, if you use ``aiorun`` this is what **you** need to remember:
 - Spawn all your work from a single, starting coroutine
 - When a shutdown signal is received, **all** currently-pending tasks
   will have ``CancelledError`` raised internally. It's up to you whether
-  you want to handle this in a ``try/except`` or not.
+  you want to handle this (inside your coroutines) with
+  a ``try/except`` or not.
 - Try to have executor jobs be shortish, since shutdown will wait for them
   to finish. If you need a long-running thread or process tasks, use
   a dedicated thread/subprocess and set ``daemon=True`` instead.
