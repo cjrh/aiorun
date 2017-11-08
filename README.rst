@@ -20,7 +20,7 @@
     :target: http://calver.org/
 
 
-aiorun
+🏃 aiorun
 ======================
 
 Here's the big idea (how you use it):
@@ -42,8 +42,8 @@ of your ``asyncio``-based application. The ``run()`` function will
 run forever. If you want to shut down when ``main()`` completes, just
 call ``loop.stop()`` inside it: that will initiate shutdown.
 
-Why?
-----
+🤔 Why?
+----------------
 
 The ``run()`` function will handle **everything** that normally needs
 to be done during the shutdown sequence of the application.  All you
@@ -82,8 +82,23 @@ There's not much else to know for general use. `aiorun` has a few special
 tools that you might need in unusual circumstances. These are discussed
 next.
 
-Smart shield for shutdown
--------------------------
+💨 Do you like `uvloop <https://github.com/magicstack/uvloop>`_?
+------------------------------------------------------------------
+
+.. code-block:: python
+
+   import asyncio, aiorun
+
+   async def main():
+       <snip>
+
+   if __name__ == '__main__':
+       run(main(), use_uvloop=true)
+
+Note that you have to ``pip install uvloop`` yourself.
+
+🛡️ Smart shield for shutdown
+---------------------------------
 
 It's unusual, but sometimes you're going to want a coroutine to not get
 interrupted by cancellation *during the shutdown sequence*. You'll look in

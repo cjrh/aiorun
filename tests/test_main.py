@@ -34,6 +34,15 @@ def test_sigterm():
     run(main(), loop=newloop())
 
 
+def test_uvloop():
+    """Basic SIGTERM"""
+    async def main():
+        await asyncio.sleep(0)
+        asyncio.get_event_loop().stop()
+
+    run(main(), use_uvloop=True)
+
+
 def test_no_coroutine():
     """Signal should still work without a main coroutine"""
     kill(SIGTERM)

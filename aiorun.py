@@ -114,9 +114,19 @@ def run(coro: Optional[Coroutine] = None, *,
         shutdown_handler: Optional[
             Callable[[Optional[AbstractEventLoop]], None]] = None,
         executor_workers: int = 10,
-        executor: Optional[Executor] = None) -> None:
+        executor: Optional[Executor] = None,
+        use_uvloop: bool = False) -> None:
     logger.debug('Entering run()')
+
+    assert not (loop and use_uvloop), (
+        "'loop' and 'use_uvloop' parameters are mutually "
+        "exclusive. (Just make your own uvloop and pass it in)."
+    )
+    if use_uvloop:
+        import uvloop
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     loop = loop or get_event_loop()
+
     if coro:
         async def new_coro():
             """During shutdown, run_until_complete() will exit
