@@ -82,6 +82,93 @@ There's not much else to know for general use. `aiorun` has a few special
 tools that you might need in unusual circumstances. These are discussed
 next.
 
+🖥️ What about TCP server startup?
+-----------------------------------
+
+You will see in many examples online that for servers, startup happens in
+several ``run_until_complete()`` phases before the primary ``run_forever()``
+which is the "main" running part of the program. How do we handle that with
+*aiorun*?
+
+Let's recreate the `echo client & server <https://docs.python.org/3/library/asyncio-stream.html#tcp-echo-client-using-streams>`_
+examples from the Standard Library documentation:
+
+**Client:**
+
+.. code-block:: python
+
+    # echo_client.py
+    import asyncio
+    from aiorun import run
+
+    async def tcp_echo_client(message):
+        # Same as original!
+        reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+        print('Send: %r' % message)
+        writer.write(message.encode())
+        data = await reader.read(100)
+        print('Received: %r' % data.decode())
+        print('Close the socket')
+        writer.close()
+        asyncio.get_event_loop().stop()  # Exit after one msg like original
+
+    message = 'Hello World!'
+    run(tcp_echo_client(message))
+
+**Server:**
+
+.. code-block:: python
+
+    import asyncio
+    from aiorun import run
+
+    async def handle_echo(reader, writer):
+        # Same as original!
+        data = await reader.read(100)
+        message = data.decode()
+        addr = writer.get_extra_info('peername')
+        print("Received %r from %r" % (message, addr))
+        print("Send: %r" % message)
+        writer.write(data)
+        await writer.drain()
+        print("Close the client socket")
+        writer.close()
+
+    async def main():
+        server = await asyncio.start_server(handle_echo, '127.0.0.1', 8888)
+        print('Serving on {}'.format(server.sockets[0].getsockname()))
+        try:
+            # Wait for cancellation
+            while True:
+                await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            server.close()
+            await server.wait_closed()
+
+    run(main())
+
+It works the same as the original examples, except you see this
+when you hit ``CTRL-C`` on the server instance:
+
+.. code-block:: bash
+
+    $ python echo_server.py
+    Running forever.
+    Serving on ('127.0.0.1', 8888)
+    Received 'Hello World!' from ('127.0.0.1', 57198)
+    Send: 'Hello World!'
+    Close the client socket
+    ^CStopping the loop
+    Entering shutdown phase.
+    Cancelling pending tasks.
+    Cancelling task:  <Task pending coro=[...snip...]>
+    Running pending tasks till complete
+    Waiting for executor shutdown.
+    Leaving. Bye!
+
+Task gathering, cancellation, and executor shutdown all happen
+automatically.
+
 💨 Do you like `uvloop <https://github.com/magicstack/uvloop>`_?
 ------------------------------------------------------------------
 
@@ -93,7 +180,7 @@ next.
        <snip>
 
    if __name__ == '__main__':
-       run(main(), use_uvloop=true)
+       run(main(), use_uvloop=True)
 
 Note that you have to ``pip install uvloop`` yourself.
 
