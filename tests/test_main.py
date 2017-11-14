@@ -34,6 +34,30 @@ def test_sigterm():
     run(main(), loop=newloop())
 
 
+def test_sigterm_loop_close():
+    """Basic SIGTERM"""
+    async def main():
+        await asyncio.sleep(5.0)
+
+    kill(SIGTERM)
+    loop = newloop()
+    run(main(), loop=loop, close_loop_after_shutdown=True)
+    assert loop.is_closed()
+
+
+def test_sigterm_loop_open():
+    """Basic SIGTERM"""
+    async def main():
+        await asyncio.sleep(5.0)
+
+    kill(SIGTERM)
+    loop = newloop()
+    # NOTE: this is the default setting for loop close
+    run(main(), loop=loop, close_loop_after_shutdown=False)
+    assert not loop.is_closed()
+    loop.close()
+
+
 def test_uvloop():
     """Basic SIGTERM"""
     async def main():
@@ -170,7 +194,7 @@ def test_sigterm_enduring_await():
             # but we can't get anything back out if that happens.
             await shutdown_waits_for(corofn(sleep=0.03))
             # main() gets cancelled here
-            await asyncio.sleep(2) # pragma: no cover.
+            await asyncio.sleep(2)  # pragma: no cover.
             # This append won't happen
             items.append(True)  # pragma: no cover.
         except asyncio.CancelledError:
