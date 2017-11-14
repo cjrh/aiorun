@@ -40,7 +40,7 @@ def test_sigterm_loop_close():
         await asyncio.sleep(5.0)
 
     kill(SIGTERM)
-    loop: asyncio.AbstractEventLoop = newloop()
+    loop = newloop()
     run(main(), loop=loop, close_loop_after_shutdown=True)
     assert loop.is_closed()
 
@@ -51,7 +51,7 @@ def test_sigterm_loop_open():
         await asyncio.sleep(5.0)
 
     kill(SIGTERM)
-    loop: asyncio.AbstractEventLoop = newloop()
+    loop = newloop()
     # NOTE: this is the default setting for loop close
     run(main(), loop=loop, close_loop_after_shutdown=False)
     assert not loop.is_closed()
