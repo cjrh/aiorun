@@ -115,7 +115,39 @@ def run(coro: Optional[Coroutine] = None, *,
             Callable[[Optional[AbstractEventLoop]], None]] = None,
         executor_workers: int = 10,
         executor: Optional[Executor] = None,
-        use_uvloop: bool = False) -> None:
+        use_uvloop: bool = False,
+        close_loop_after_shutdown: bool = False) -> None:
+    """
+    Start up the event loop, and wait for a signal to shut down.
+
+    :param coro: Optionally supply a coroutine. The loop will still
+        run if missing. This would typically be a "main" coroutine
+        from which all other work is spawned.
+    :param loop: Optionally supply your own loop. If missing, the
+        default loop attached to the current thread context will
+        be used, i.e., whatever ``asyncio.get_event_loop()`` returns.
+    :param shutdown_handler: By default, SIGINT and SIGTERM will be
+        handled and will stop the loop, thereby invoking the shutdown
+        sequence. Alternatively you can supply your own shutdown
+        handler function. It should conform to the type spec as shown
+        in the function signature.
+    :param executor_workers: The number of workers in the executor.
+        (NOTE: ``run()`` creates a new executor instance internally,
+        regardless of whether you supply your own loop.)
+    :param executor: You can decide to use your own executor instance
+        if you like.
+    :param use_uvloop: The loop policy will be set to use uvloop. It
+        is your responsibility to install uvloop. If missing, an
+        ``ImportError`` will be raised.
+    :param close_loop_after_shutdown: It turns out to be quite
+        inconvenient to automatically close the loop after shutdown.
+        For example, during testing it is common to call ``run()`` a
+        bunch of times. If the loop is closed, then subsequent attempts
+        to call ``run()`` will raise because "the loop is closed".One
+        way to get around this is to always supply your own loop, but
+        that introduces more complexity. Therefore, by default, don't
+        close the loop on run exit.
+    """
     logger.debug('Entering run()')
 
     assert not (loop and use_uvloop), (
@@ -185,6 +217,7 @@ def run(coro: Optional[Coroutine] = None, *,
 
     logger.critical('Waiting for executor shutdown.')
     executor.shutdown(wait=True)
-    logger.critical('Closing the loop.')
-    loop.close()
+    if close_loop_after_shutdown:
+        logger.critical('Closing the loop.')
+        loop.close()
     logger.critical('Leaving. Bye!')
