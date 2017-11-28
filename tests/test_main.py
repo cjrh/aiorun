@@ -31,31 +31,9 @@ def test_sigterm():
         await asyncio.sleep(5.0)
 
     kill(SIGTERM)
-    run(main(), loop=newloop())
-
-
-def test_sigterm_loop_close():
-    """Basic SIGTERM"""
-    async def main():
-        await asyncio.sleep(5.0)
-
-    kill(SIGTERM)
     loop = newloop()
-    run(main(), loop=loop, close_loop_after_shutdown=True)
-    assert loop.is_closed()
-
-
-def test_sigterm_loop_open():
-    """Basic SIGTERM"""
-    async def main():
-        await asyncio.sleep(5.0)
-
-    kill(SIGTERM)
-    loop = newloop()
-    # NOTE: this is the default setting for loop close
-    run(main(), loop=loop, close_loop_after_shutdown=False)
+    run(main(), loop=loop)
     assert not loop.is_closed()
-    loop.close()
 
 
 def test_uvloop():

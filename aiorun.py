@@ -115,8 +115,7 @@ def run(coro: Optional[Coroutine] = None, *,
             Callable[[Optional[AbstractEventLoop]], None]] = None,
         executor_workers: int = 10,
         executor: Optional[Executor] = None,
-        use_uvloop: bool = False,
-        close_loop_after_shutdown: bool = False) -> None:
+        use_uvloop: bool = False) -> None:
     """
     Start up the event loop, and wait for a signal to shut down.
 
@@ -157,7 +156,10 @@ def run(coro: Optional[Coroutine] = None, *,
     if use_uvloop:
         import uvloop
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    loop = loop or get_event_loop()
+
+    loop_was_supplied = bool(loop)
+    if not loop_was_supplied:
+        loop = get_event_loop()
 
     if coro:
         async def new_coro():
@@ -174,9 +176,14 @@ def run(coro: Optional[Coroutine] = None, *,
             except asyncio.CancelledError:
                 pass
         loop.create_task(new_coro())
+
     shutdown_handler = shutdown_handler or partial(_shutdown, loop)
     loop.add_signal_handler(SIGINT, shutdown_handler)
     loop.add_signal_handler(SIGTERM, shutdown_handler)
+
+    # TODO: We probably don't want to create a different executor if the
+    # TODO: loop was supplied. (User might have put stuff on that loop's
+    # TODO: executor).
     if not executor:
         logger.debug('Creating default executor')
         executor = ThreadPoolExecutor(max_workers=executor_workers)
@@ -217,7 +224,8 @@ def run(coro: Optional[Coroutine] = None, *,
 
     logger.critical('Waiting for executor shutdown.')
     executor.shutdown(wait=True)
-    if close_loop_after_shutdown:
+    # If loop was supplied, it's up to the caller to close!
+    if not loop_was_supplied:
         logger.critical('Closing the loop.')
         loop.close()
     logger.critical('Leaving. Bye!')
