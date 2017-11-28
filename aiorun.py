@@ -138,14 +138,6 @@ def run(coro: Optional[Coroutine] = None, *,
     :param use_uvloop: The loop policy will be set to use uvloop. It
         is your responsibility to install uvloop. If missing, an
         ``ImportError`` will be raised.
-    :param close_loop_after_shutdown: It turns out to be quite
-        inconvenient to automatically close the loop after shutdown.
-        For example, during testing it is common to call ``run()`` a
-        bunch of times. If the loop is closed, then subsequent attempts
-        to call ``run()`` will raise because "the loop is closed".One
-        way to get around this is to always supply your own loop, but
-        that introduces more complexity. Therefore, by default, don't
-        close the loop on run exit.
     """
     logger.debug('Entering run()')
 
