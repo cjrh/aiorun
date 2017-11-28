@@ -1,0 +1,5 @@
+2017.11.6 Due to https://bugs.python.org/issue23548, we kinda have to close
+          the event loop, else we'll get exceptions during atexit. Therefore,
+          reverting the change.  Now, if caller supplies a loop, it is up
+          to caller to close, but if no loop is supplied, we will close
+          the default loop on exit.
