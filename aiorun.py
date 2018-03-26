@@ -197,7 +197,7 @@ def run(coro: Optional[Coroutine] = None, *,
 
         logger.critical('Cancelling pending tasks.')
         for t in tasks:
-            print('Cancelling task: ', t)
+            logger.debug('Cancelling task: %s', t)
             t.cancel()
         return tasks, do_not_cancel
 
