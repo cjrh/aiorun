@@ -11,7 +11,13 @@ from asyncio import (
 )
 from concurrent.futures import Executor, ThreadPoolExecutor
 from signal import SIGTERM, SIGINT
-from typing import Optional, Coroutine, Callable
+from typing import Optional, Callable
+try:  # pragma: no cover
+    # Coroutine only arrived in Python 3.5.3, and Ubuntu 16.04 is unfortunately
+    # stuck on 3.5.2 for the time being. Revisit this in a year.
+    from typing import Coroutine
+except ImportError:
+    pass
 from weakref import WeakSet
 from functools import partial
 
@@ -109,7 +115,7 @@ def _shutdown(loop=None):
     loop.call_soon_threadsafe(loop.stop)
 
 
-def run(coro: Optional[Coroutine] = None, *,
+def run(coro: 'Optional[Coroutine]' = None, *,
         loop: Optional[AbstractEventLoop] = None,
         shutdown_handler: Optional[
             Callable[[Optional[AbstractEventLoop]], None]] = None,
