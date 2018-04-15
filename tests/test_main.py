@@ -1,3 +1,4 @@
+import sys
 import asyncio
 import os
 import time
@@ -36,6 +37,11 @@ def test_sigterm():
     assert not loop.is_closed()
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 7), reason=(
+        "On nightly (3.7), the use of uvloop causes the following error:\n\n"
+        "AttributeError: module 'asyncio.coroutines' has no attribute 'debug_wrapper'\n\n"
+        "This is being tracked upstream at https://github.com/MagicStack/uvloop/issues/126"
+))
 def test_uvloop():
     """Basic SIGTERM"""
     async def main():
