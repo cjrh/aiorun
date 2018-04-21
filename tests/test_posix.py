@@ -14,8 +14,11 @@ try:
 except ImportError:
     all_tasks = asyncio.Task.all_tasks
 
+if sys.platform == 'win32':
+    pytest.skip("Windows doesn't use POSIX signals", allow_module_level=True)
 
-def kill(sig=SIGTERM, after=0.05):
+
+def kill(sig=SIGTERM, after=0.01):
     """Tool to send a signal after a pause"""
     def job():
         pid = os.getpid()
