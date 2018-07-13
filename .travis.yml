@@ -1,11 +1,15 @@
+dist: xenial
+sudo: required
+
 language: python
 python:
   - "3.5"
   - "3.6"
+  - "3.7"
   - "nightly" # currently points to 3.7-dev
 install:
     - "pip install -r requirements-test.txt"
 script:
-    PYTHONPATH=. py.test --cov aiorun tests/
+    PYTHONPATH=. py.test --cov aiohealthcheck tests/
 after_success:
     coveralls
