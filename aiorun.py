@@ -111,7 +111,7 @@ def _shutdown(loop=None):
     loop = loop or get_event_loop()
     loop.remove_signal_handler(SIGTERM)
     loop.add_signal_handler(SIGINT, lambda: None)
-    logger.critical('Stopping the loop')
+    logger.info('Stopping the loop')
     loop.call_soon_threadsafe(loop.stop)
 
 
@@ -186,9 +186,9 @@ def run(coro: 'Optional[Coroutine]' = None, *,
         logger.debug('Creating default executor')
         executor = ThreadPoolExecutor(max_workers=executor_workers)
     loop.set_default_executor(executor)
-    logger.critical('Running forever.')
+    logger.info('Running forever.')
     loop.run_forever()
-    logger.critical('Entering shutdown phase.')
+    logger.info('Entering shutdown phase.')
 
     def sep():
         tasks = Task.all_tasks(loop=loop)
@@ -201,7 +201,7 @@ def run(coro: 'Optional[Coroutine]' = None, *,
 
         tasks -= do_not_cancel
 
-        logger.critical('Cancelling pending tasks.')
+        logger.info('Cancelling pending tasks.')
         for t in tasks:
             logger.debug('Cancelling task: %s', t)
             t.cancel()
@@ -215,15 +215,15 @@ def run(coro: 'Optional[Coroutine]' = None, *,
     # the gathered group will actually be complete. You need to
     # enable this with the ``return_exceptions`` flag.
     group = gather(*tasks, *do_not_cancel, return_exceptions=True)
-    logger.critical('Running pending tasks till complete')
+    logger.info('Running pending tasks till complete')
     # TODO: obtain all the results, and log any results that are exceptions
     # other than CancelledError. Will be useful for troubleshooting.
     loop.run_until_complete(group)
 
-    logger.critical('Waiting for executor shutdown.')
+    logger.info('Waiting for executor shutdown.')
     executor.shutdown(wait=True)
     # If loop was supplied, it's up to the caller to close!
     if not loop_was_supplied:
-        logger.critical('Closing the loop.')
+        logger.info('Closing the loop.')
         loop.close()
-    logger.critical('Leaving. Bye!')
+    logger.info('Leaving. Bye!')
