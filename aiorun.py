@@ -67,6 +67,8 @@ def shutdown_waits_for(coro, loop=None):
                 fut.set_result(result)
             except asyncio.InvalidStateError:
                 logger.warning('Failed to set result.')
+        except CancelledError as e:
+            fut.set_exception(e)
         except Exception as e:
             fut.set_exception(e)
 
