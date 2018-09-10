@@ -55,7 +55,7 @@ def shutdown_waits_for(coro, loop=None):
 
     async def coro_proxy():
         """This function will await coro, but it will also send the result
-        over the the future. Rememeber: the outside caller (of
+        over the the future. Remember: the outside caller (of
         shutdown_waits_for) will be awaiting fut, NOT coro(), due to
         the decoupling. However, when coro completes, we need to send its
         result over to the fut to make it look *as if* it was just coro
