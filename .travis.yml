@@ -11,8 +11,30 @@ matrix:
     dist: xenial
   - python: "nightly"
     dist: xenial
+  - os: osx
+    language: sh
+    python: "3.7"
+    before_install:
+        #- brew update
+        - brew upgrade python3
+        - python3 -m venv venv
+        - source venv/bin/activate
+  - os: windows
+    language: sh
+    python: "3.7"
+    before_install:
+        - choco install python3
+        - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
+        - python -m venv venv
+        - venv/Scripts/activate.bat
+        - python -m pip install --upgrade pip wheel
+  allow_failures:
+  - os: osx
+  - os: windows
+
 install:
-    - "pip install -U -r requirements-test.txt"
+    - "pip install -r requirements-test.txt"
+    - "flit install"
 script:
     PYTHONPATH=. py.test --verbose --fulltrace --cov aiorun tests/
 after_success:
