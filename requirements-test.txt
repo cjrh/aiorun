@@ -1,5 +1,5 @@
 typing; python_version < '3.5'
-pytest
+pytest==4.3.0
 pytest-cov
 coveralls
 uvloop
