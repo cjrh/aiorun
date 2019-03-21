@@ -62,12 +62,13 @@ def shutdown_waits_for(coro, loop=None):
         """
         try:
             result = await coro
-            try:
-                fut.set_result(result)
-            except asyncio.InvalidStateError:
-                logger.warning('Failed to set result.')
         except (CancelledError, Exception) as e:
-            fut.set_exception(e)
+            dispatch = partial(fut.set_exception, e)
+        else:
+            dispatch = partial(fut.set_result, result)
+
+        if not fut.cancelled():
+            dispatch()
 
     new_coro = coro_proxy()  # We'll taskify this one instead of coro.
     _DO_NOT_CANCEL_COROS.add(new_coro)  # The new task must not be cancelled.
