@@ -7,7 +7,6 @@ from asyncio import (
     Task,
     gather,
     CancelledError,
-    Future
 )
 from concurrent.futures import Executor, ThreadPoolExecutor
 from signal import SIGTERM, SIGINT
@@ -51,7 +50,7 @@ def shutdown_waits_for(coro, loop=None):
     via this function.
     """
     loop = loop or get_event_loop()
-    fut = Future(loop=loop)  # This future will connect coro and the caller.
+    fut = loop.create_future()  # This future will connect coro and the caller.
 
     async def coro_proxy():
         """This function will await coro, but it will also send the result
