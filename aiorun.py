@@ -25,6 +25,11 @@ __all__ = ['run', 'shutdown_waits_for']
 __version__ = '2018.9.1'
 logger = logging.getLogger('aiorun')
 
+try:
+    from asyncio import all_tasks
+except ImportError:
+    all_tasks = Task.all_tasks
+
 
 _DO_NOT_CANCEL_COROS = WeakSet()
 
@@ -191,7 +196,7 @@ def run(coro: 'Optional[Coroutine]' = None, *,
     logger.info('Entering shutdown phase.')
 
     def sep():
-        tasks = Task.all_tasks(loop=loop)
+        tasks = all_tasks(loop=loop)
         do_not_cancel = set()
         for t in tasks:
             # TODO: we don't need access to the coro. We could simply
