@@ -13,6 +13,6 @@ matrix:
 install:
     - "pip install -r requirements-test.txt"
 script:
-    PYTHONPATH=. py.test --cov aiorun tests/
+    PYTHONPATH=. py.test --fulltrace --cov aiorun tests/
 after_success:
     coveralls
