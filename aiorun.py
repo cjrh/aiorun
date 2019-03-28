@@ -25,6 +25,7 @@ __all__ = ['run', 'shutdown_waits_for']
 __version__ = '2018.9.1'
 logger = logging.getLogger('aiorun')
 
+# asyncio.Task.all_tasks is dperecated in favour of asyncio.all_tasks in Py3.7
 try:
     from asyncio import all_tasks
 except ImportError:
