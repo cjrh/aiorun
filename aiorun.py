@@ -69,12 +69,12 @@ def shutdown_waits_for(coro, loop=None):
         try:
             result = await coro
         except (CancelledError, Exception) as e:
-            dispatch = partial(fut.set_exception, e)
+            set_fut_done = partial(fut.set_exception, e)
         else:
-            dispatch = partial(fut.set_result, result)
+            set_fut_done = partial(fut.set_result, result)
 
         if not fut.cancelled():
-            dispatch()
+            set_fut_done()
 
     new_coro = coro_proxy()  # We'll taskify this one instead of coro.
     _DO_NOT_CANCEL_COROS.add(new_coro)  # The new task must not be cancelled.
