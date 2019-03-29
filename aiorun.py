@@ -25,6 +25,12 @@ __all__ = ['run', 'shutdown_waits_for']
 __version__ = '2018.9.1'
 logger = logging.getLogger('aiorun')
 
+# asyncio.Task.all_tasks is dperecated in favour of asyncio.all_tasks in Py3.7
+try:
+    from asyncio import all_tasks
+except ImportError:
+    all_tasks = Task.all_tasks
+
 
 _DO_NOT_CANCEL_COROS = WeakSet()
 
@@ -62,12 +68,13 @@ def shutdown_waits_for(coro, loop=None):
         """
         try:
             result = await coro
-            try:
-                fut.set_result(result)
-            except asyncio.InvalidStateError:
-                logger.warning('Failed to set result.')
         except (CancelledError, Exception) as e:
-            fut.set_exception(e)
+            set_fut_done = partial(fut.set_exception, e)
+        else:
+            set_fut_done = partial(fut.set_result, result)
+
+        if not fut.cancelled():
+            set_fut_done()
 
     new_coro = coro_proxy()  # We'll taskify this one instead of coro.
     _DO_NOT_CANCEL_COROS.add(new_coro)  # The new task must not be cancelled.
@@ -190,7 +197,7 @@ def run(coro: 'Optional[Coroutine]' = None, *,
     logger.info('Entering shutdown phase.')
 
     def sep():
-        tasks = Task.all_tasks(loop=loop)
+        tasks = all_tasks(loop=loop)
         do_not_cancel = set()
         for t in tasks:
             # TODO: we don't need access to the coro. We could simply

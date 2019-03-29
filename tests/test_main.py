@@ -8,6 +8,12 @@ from concurrent.futures import ThreadPoolExecutor
 from aiorun import run, shutdown_waits_for, _DO_NOT_CANCEL_COROS
 import pytest
 
+# asyncio.Task.all_tasks is dperecated in favour of asyncio.all_tasks in Py3.7
+try:
+    from asyncio import all_tasks
+except ImportError:
+    all_tasks = asyncio.Task.all_tasks
+
 
 def kill(sig=SIGTERM, after=0.01):
     """Tool to send a signal after a pause"""
@@ -206,7 +212,7 @@ def test_sigterm_enduring_indirect_cancel():
         for shutdown, and then cancel it directly. This should raise
         CancelledError at the location of the caller for
         `shutdown_waits_for()`."""
-        tasks = asyncio.Task.all_tasks()
+        tasks = all_tasks()
         for t in tasks:  # pragma: no cover
             if t._coro in _DO_NOT_CANCEL_COROS:
                 t.cancel()
