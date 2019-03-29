@@ -15,7 +15,7 @@ try:  # pragma: no cover
     # Coroutine only arrived in Python 3.5.3, and Ubuntu 16.04 is unfortunately
     # stuck on 3.5.2 for the time being. Revisit this in a year.
     from typing import Coroutine
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 from weakref import WeakSet
 from functools import partial
@@ -25,8 +25,10 @@ __all__ = ['run', 'shutdown_waits_for']
 __version__ = '2018.9.1'
 logger = logging.getLogger('aiorun')
 
-# asyncio.Task.all_tasks is dperecated in favour of asyncio.all_tasks in Py3.7
 try:
+    # asyncio.Task.all_tasks is deprecated in favour of asyncio.all_tasks
+    # in Python 3.7; remove ImportError handling when we drop support for
+    # 3.6.
     from asyncio import all_tasks
 except ImportError:
     all_tasks = Task.all_tasks
