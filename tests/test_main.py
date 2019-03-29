@@ -15,7 +15,7 @@ except ImportError:
     all_tasks = asyncio.Task.all_tasks
 
 
-def kill(sig=SIGTERM, after=0.01):
+def kill(sig=SIGTERM, after=0.05):
     """Tool to send a signal after a pause"""
     def job():
         pid = os.getpid()
@@ -43,11 +43,6 @@ def test_sigterm():
     assert not loop.is_closed()
 
 
-@pytest.mark.skipif(sys.version_info >= (3, 7), reason=(
-        "On nightly (3.7), the use of uvloop causes the following error:\n\n"
-        "AttributeError: module 'asyncio.coroutines' has no attribute 'debug_wrapper'\n\n"
-        "This is being tracked upstream at https://github.com/MagicStack/uvloop/issues/126"
-))
 def test_uvloop():
     """Basic SIGTERM"""
     async def main():
