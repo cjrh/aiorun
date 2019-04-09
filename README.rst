@@ -1,3 +1,6 @@
+.. contents:: Table of Contents
+
+
 .. image:: https://travis-ci.org/cjrh/aiorun.svg?branch=master
     :target: https://travis-ci.org/cjrh/aiorun
 
@@ -44,9 +47,6 @@ This package provides a ``run()`` function as the starting point
 of your ``asyncio``-based application. The ``run()`` function will
 run forever. If you want to shut down when ``main()`` completes, just
 call ``loop.stop()`` inside it: that will initiate shutdown.
-
-
-.. contents::
 
 
 🤔 Why?
