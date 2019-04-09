@@ -45,6 +45,10 @@ of your ``asyncio``-based application. The ``run()`` function will
 run forever. If you want to shut down when ``main()`` completes, just
 call ``loop.stop()`` inside it: that will initiate shutdown.
 
+
+.. contents::
+
+
 🤔 Why?
 ----------------
 
