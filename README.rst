@@ -253,3 +253,72 @@ write explicit cancellation handling.
 Oh, and you can use ``shutdown_waits_for()`` as if it were ``asyncio.shield()``
 too. For that use-case it works the same.  If you're using ``aiorun``, there
 is no reason to use ``shield()``.
+
+Windows Support
+---------------
+
+``aiorun`` also supports Windows! Kinda. Sorta. The root problem with Windows,
+for a thing like ``aiorun`` is that Windows doesn't support *signal handling*
+the way Linux or Mac OS X does. Like, at all.
+
+For Linux, ``aiorun`` does "the right thing" out of the box for the
+``SIGINT`` and ``SIGTERM`` signals; i.e., it will catch them and initiate
+a safe shutdown process as described earlier. However, on *Windows*, these
+signals don't work.
+
+There are two signals that work on Windows: the ``CTRL-C`` signal (happens
+when you press, unsurprisingly, ``CTRL-C``, and the ``CTRL-BREAK`` signal
+which happens when you...well, you get the picture.
+
+The good news is that, for ``aiorun``, both of these will work. Yay! The bad
+news is that for them to work, you have to run your code in a Console
+window. Boo!
+
+Fortunately, it turns out that you can run an asyncio-based process *not*
+attached to a Console window, e.g. as a service or a subprocess, *and* have
+it also receive a signal to safely shut down in a controlled way. It turns
+out that it is possible to *send a ``CTRL-BREAK`` signal* to another process,
+with no console window involved, but only as long as that process was created
+in a particular way and---here is the drop---this targetted process is a
+child process of the one sending the signal. Yeah, I know, it's a downer.
+
+There is an example of how to do this in the tests:
+
+.. code-block:: python3
+
+    import subprocess as sp
+
+    proc = sp.Popen(
+        ['python', 'app.py'],
+        stdout=sp.PIPE,
+        stderr=sp.STDOUT,
+        creationflags=sp.CREATE_NEW_PROCESS_GROUP
+    )
+    print(proc.pid)
+
+Notice how we print out the process id (``pid``). Then you can send that
+process the signal from a completely different process, once you know
+the ``pid``:
+
+.. code-block:: python3
+
+    import os, signal
+
+    os.kill(pid, signal.CTRL_BREAK_EVENT)
+
+(Remember, ``os.kill()`` doesn't actually kill, it only sends a signal)
+
+``aiorun`` supports this use-case above, although I'll be pretty surprised
+if anyone actually uses it to manage microservices (does anyone do this?)
+
+So to summarize: ``aiorun`` will do a controlled shutdown if either
+``CTRL-C`` or ``CTRL-BREAK`` is entered via keyboard in a Console window
+with a running instance, or if the ``CTRL-BREAK`` signal is sent to
+a *subprocess* that was created with the ``CREATE_NEW_PROCESS_GROUP``
+flag set. `Here <https://stackoverflow.com/a/35792192>`_ is a much more
+detailed explanation of these issues.
+
+Finally, ``uvloop`` is not yet supported on Windows so that won't work
+either.
+
+At the very least, ``aiorun`` will, well, *run* on Windows ¯\_(ツ)_/¯
