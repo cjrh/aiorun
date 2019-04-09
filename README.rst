@@ -254,8 +254,8 @@ Oh, and you can use ``shutdown_waits_for()`` as if it were ``asyncio.shield()``
 too. For that use-case it works the same.  If you're using ``aiorun``, there
 is no reason to use ``shield()``.
 
-Windows Support
----------------
+🙏 Windows Support
+-------------------------
 
 ``aiorun`` also supports Windows! Kinda. Sorta. The root problem with Windows,
 for a thing like ``aiorun`` is that Windows doesn't support *signal handling*
