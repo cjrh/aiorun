@@ -1,4 +1,5 @@
 """Boilerplate for asyncio applications"""
+import sys
 import logging
 import asyncio
 from asyncio import (
@@ -9,6 +10,7 @@ from asyncio import (
     CancelledError,
 )
 from concurrent.futures import Executor, ThreadPoolExecutor
+import signal
 from signal import SIGTERM, SIGINT
 from typing import Optional, Callable
 try:  # pragma: no cover
@@ -24,6 +26,7 @@ from functools import partial
 __all__ = ['run', 'shutdown_waits_for']
 __version__ = '2019.3.1'
 logger = logging.getLogger('aiorun')
+WINDOWS = sys.platform == 'win32'
 
 try:
     # asyncio.Task.all_tasks is deprecated in favour of asyncio.all_tasks
@@ -114,19 +117,9 @@ def shutdown_waits_for(coro, loop=None):
     return inner()
 
 
-def _shutdown(loop=None):
-    logger.debug('Entering shutdown handler')
-    loop = loop or get_event_loop()
-    loop.remove_signal_handler(SIGTERM)
-    loop.add_signal_handler(SIGINT, lambda: None)
-    logger.info('Stopping the loop')
-    loop.call_soon_threadsafe(loop.stop)
-
-
 def run(coro: 'Optional[Coroutine]' = None, *,
         loop: Optional[AbstractEventLoop] = None,
-        shutdown_handler: Optional[
-            Callable[[Optional[AbstractEventLoop]], None]] = None,
+        shutdown_handler: Optional[Callable[[AbstractEventLoop], None]] = None,
         executor_workers: int = 10,
         executor: Optional[Executor] = None,
         use_uvloop: bool = False) -> None:
@@ -134,8 +127,9 @@ def run(coro: 'Optional[Coroutine]' = None, *,
     Start up the event loop, and wait for a signal to shut down.
 
     :param coro: Optionally supply a coroutine. The loop will still
-        run if missing. This would typically be a "main" coroutine
-        from which all other work is spawned.
+        run if missing. The loop will continue to run after the supplied
+        coroutine finishes. The supplied coroutine is typically
+        a "main" coroutine from which all other work is spawned.
     :param loop: Optionally supply your own loop. If missing, the
         default loop attached to the current thread context will
         be used, i.e., whatever ``asyncio.get_event_loop()`` returns.
@@ -183,9 +177,25 @@ def run(coro: 'Optional[Coroutine]' = None, *,
                 pass
         loop.create_task(new_coro())
 
-    shutdown_handler = shutdown_handler or partial(_shutdown, loop)
-    loop.add_signal_handler(SIGINT, shutdown_handler)
-    loop.add_signal_handler(SIGTERM, shutdown_handler)
+    shutdown_handler = shutdown_handler or _shutdown_handler
+
+    if WINDOWS:  # pragma: no cover
+        # This is to allow CTRL-C to be detected in a timely fashion,
+        # see: https://bugs.python.org/issue23057#msg246316
+        loop.create_task(windows_support_wakeup())
+
+        # This is to be able to handle SIGBREAK.
+        def windows_handler(sig, frame):
+            # Disable the handler so it won't be called again.
+            signame = signal.Signals(sig).name
+            logger.critical('Received signal: %s. Stopping the loop.', signame)
+            shutdown_handler(loop)
+
+        signal.signal(signal.SIGBREAK, windows_handler)
+        signal.signal(signal.SIGINT, windows_handler)
+    else:
+        loop.add_signal_handler(SIGINT, shutdown_handler, loop)
+        loop.add_signal_handler(SIGTERM, shutdown_handler, loop)
 
     # TODO: We probably don't want to create a different executor if the
     # TODO: loop was supplied. (User might have put stuff on that loop's
@@ -194,8 +204,16 @@ def run(coro: 'Optional[Coroutine]' = None, *,
         logger.debug('Creating default executor')
         executor = ThreadPoolExecutor(max_workers=executor_workers)
     loop.set_default_executor(executor)
-    logger.info('Running forever.')
-    loop.run_forever()
+    try:
+        loop.run_forever()
+    except KeyboardInterrupt:  # pragma: no cover
+        logger.info('Got KeyboardInterrupt')
+        if WINDOWS:
+            # Windows doesn't do any POSIX signal handling, and no
+            # abstraction layer for signals is currently implemented in
+            # asyncio. So we fall back to KeyboardInterrupt (triggered
+            # by the user/environment sending CTRL-C, or signal.CTRL_C_EVENT
+            shutdown_handler()
     logger.info('Entering shutdown phase.')
 
     def sep():
@@ -234,4 +252,28 @@ def run(coro: 'Optional[Coroutine]' = None, *,
     if not loop_was_supplied:
         logger.info('Closing the loop.')
         loop.close()
-    logger.info('Leaving. Bye!')
+    logger.critical('Leaving. Bye!')
+
+
+async def windows_support_wakeup():  # pragma: no cover
+    """See https://stackoverflow.com/a/36925722 """
+    while True:
+        await asyncio.sleep(0.1)
+
+
+def _shutdown_handler(loop):
+    logger.debug('Entering shutdown handler')
+    loop = loop or get_event_loop()
+
+    # Disable the handlers so they won't be called again.
+    if WINDOWS:  # pragma: no cover
+        # These calls to signal.signal can only be called from the main
+        # thread.
+        signal.signal(signal.SIGBREAK, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+    else:
+        loop.remove_signal_handler(SIGTERM)
+        loop.add_signal_handler(SIGINT, lambda: None)
+
+    logger.critical('Stopping the loop')
+    loop.call_soon_threadsafe(loop.stop)

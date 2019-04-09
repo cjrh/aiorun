@@ -1,0 +1,27 @@
+environment:
+
+  username: cjrh
+  password:
+    secure: MYZ6oC04eTIab1NvjVE4iIIisKCrZh7XXvOx4sZLqGM=
+
+  matrix:
+
+    - PYTHON: "C:\\Python35"
+    - PYTHON: "C:\\Python35-x64"
+    - PYTHON: "C:\\Python36"
+    - PYTHON: "C:\\Python36-x64"
+    - PYTHON: "C:\\Python37"
+    - PYTHON: "C:\\Python37-x64"
+
+install:
+  # We need wheel installed to build wheels
+  - "%PYTHON%\\python.exe -m pip install -U pip setuptools wheel"
+  - "%PYTHON%\\python.exe -m pip install -r requirements-test.txt"
+  - "%PYTHON%\\Scripts\\flit.exe install --pth-file"
+
+
+build: off
+
+test_script:
+  # Might need PYTHONPATH=. at the start
+  - "%PYTHON%\\python.exe -m pytest --cov"
