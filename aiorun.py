@@ -24,7 +24,7 @@ from functools import partial
 
 
 __all__ = ['run', 'shutdown_waits_for']
-__version__ = '2019.3.1'
+__version__ = '2019.4.1'
 logger = logging.getLogger('aiorun')
 WINDOWS = sys.platform == 'win32'
 
