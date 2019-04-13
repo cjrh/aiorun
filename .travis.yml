@@ -28,9 +28,6 @@ matrix:
         - python -m venv venv
         - venv/Scripts/activate.bat
         - python -m pip install --upgrade pip wheel
-  allow_failures:
-  - os: osx
-  - os: windows
 
 install:
     - "pip install -r requirements-test.txt"
