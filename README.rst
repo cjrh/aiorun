@@ -277,7 +277,7 @@ window. Boo!
 Fortunately, it turns out that you can run an asyncio-based process *not*
 attached to a Console window, e.g. as a service or a subprocess, *and* have
 it also receive a signal to safely shut down in a controlled way. It turns
-out that it is possible to *send a ``CTRL-BREAK`` signal* to another process,
+out that it is possible to send a ``CTRL-BREAK`` signal to another process,
 with no console window involved, but only as long as that process was created
 in a particular way and---here is the drop---this targetted process is a
 child process of the one sending the signal. Yeah, I know, it's a downer.
@@ -321,4 +321,4 @@ detailed explanation of these issues.
 Finally, ``uvloop`` is not yet supported on Windows so that won't work
 either.
 
-At the very least, ``aiorun`` will, well, *run* on Windows ¯\_(ツ)_/¯
+At the very least, ``aiorun`` will, well, *run* on Windows ¯\\_(ツ)_/¯
