@@ -5,6 +5,7 @@ import logging
 import signal
 import sys
 import inspect
+import threading
 from asyncio import AbstractEventLoop, CancelledError, Task, gather, get_event_loop
 from concurrent.futures import Executor, ThreadPoolExecutor
 from functools import partial
@@ -222,6 +223,8 @@ def inner(
         is your responsibility to install uvloop. If missing, an
         ``ImportError`` will be raised.
     """
+    t = threading.current_thread()
+    print("Current thread: ", t.name)
     logger.debug("Entering run()")
 
     assert not (loop and use_uvloop), (
