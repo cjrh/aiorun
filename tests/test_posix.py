@@ -1,25 +1,28 @@
-import sys
 import asyncio
 import os
-import time
+import sys
 import threading
-from signal import SIGINT, SIGTERM
+import time
 from concurrent.futures import ThreadPoolExecutor
-from aiorun import run, shutdown_waits_for, _DO_NOT_CANCEL_COROS
+from signal import SIGINT, SIGTERM
+
 import pytest
 
-# asyncio.Task.all_tasks is dperecated in favour of asyncio.all_tasks in Py3.7
+from aiorun import _DO_NOT_CANCEL_COROS, run, shutdown_waits_for
+
+# asyncio.Task.all_tasks is deprecated in favour of asyncio.all_tasks in Py3.7
 try:
     from asyncio import all_tasks
 except ImportError:
     all_tasks = asyncio.Task.all_tasks
 
-if sys.platform == 'win32':
+if sys.platform == "win32":
     pytest.skip("Windows doesn't use POSIX signals", allow_module_level=True)
 
 
 def kill(sig=SIGTERM, after=0.01):
     """Tool to send a signal after a pause"""
+
     def job():
         pid = os.getpid()
         time.sleep(after)
@@ -37,6 +40,7 @@ def newloop():
 
 def test_sigterm():
     """Basic SIGTERM"""
+
     async def main():
         await asyncio.sleep(5.0)
 
@@ -48,6 +52,7 @@ def test_sigterm():
 
 def test_uvloop():
     """Basic SIGTERM"""
+
     async def main():
         await asyncio.sleep(0)
         asyncio.get_event_loop().stop()
@@ -85,16 +90,18 @@ def test_sigint_pause():
         try:
             await asyncio.sleep(5.0)
         except asyncio.CancelledError:
-            await asyncio.sleep(0.04)
+            await asyncio.sleep(0.2)
             items.append(True)
 
     # The first sigint triggers shutdown mode, so all tasks are cancelled.
     # Note that main() catches CancelledError, and does a little bit more
     # work before exiting.
-    kill(SIGINT, after=0.02)
+    kill(SIGINT, after=0.05)
     # The second sigint should have no effect, because aiorun signal
     # handler disables itself after the first sigint received, above.
-    kill(SIGINT, after=0.03)
+    kill(SIGINT, after=0.07)
+    kill(SIGINT, after=0.08)
+    kill(SIGINT, after=0.09)
     newloop()
     run(main())
     assert items  # Verify that main() ran till completion.
@@ -138,7 +145,9 @@ def test_sigterm_enduring_ensure_future():
     assert items
 
 
-@pytest.mark.filterwarnings("ignore:coroutine 'shutdown_waits_for.<locals>.inner' was never awaited")
+@pytest.mark.filterwarnings(
+    "ignore:coroutine 'shutdown_waits_for.<locals>.inner' was never awaited"
+)
 def test_sigterm_enduring_bare():
     """Call `shutdown_waits_for() without await, or create_task(), or
     ensure_future(). It's just bare. This actually works (because of
@@ -186,7 +195,7 @@ def test_sigterm_enduring_await():
             # This append won't happen
             items.append(True)  # pragma: no cover.
         except asyncio.CancelledError:
-            print('main got cancelled')
+            print("main got cancelled")
             raise
 
     kill(SIGTERM, after=0.02)

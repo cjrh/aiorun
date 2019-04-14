@@ -20,16 +20,34 @@
     :target: https://img.shields.io/badge/install-pip%20install%20aiorun-ff69b4.svg
 
 .. image:: https://img.shields.io/pypi/v/aiorun.svg
-    :target: https://img.shields.io/pypi/v/aiorun.svg
+    :target: https://pypi.python.org/pypi/aiorun
 
 .. image:: https://img.shields.io/badge/calver-YYYY.MM.MINOR-22bfda.svg
     :target: http://calver.org/
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/ambv/black
 
 
 🏃 aiorun
 ======================
 
 Here's the big idea (how you use it):
+
+.. code-block:: python
+
+   import asyncio
+   from aiorun import run
+
+   @run
+   async def main():
+       # Put your application code here
+       await asyncio.sleep(1.0)
+
+
+You don't have to bother with all that *if __name__ ==...* boilerplate: it'll
+just start up the loop and run your async function. If you prefer less magic,
+it also works the Old Fashioned Way:
 
 .. code-block:: python
 
@@ -44,9 +62,10 @@ Here's the big idea (how you use it):
        run(main())
 
 This package provides a ``run()`` function as the starting point
-of your ``asyncio``-based application. The ``run()`` function will
-run forever. If you want to shut down when ``main()`` completes, just
-call ``loop.stop()`` inside it: that will initiate shutdown.
+of your ``asyncio``-based application. Note that the event loop started in
+the background will run forever, even after ``main()`` above, exits. If you
+want to shut down when ``main()`` completes, just call ``loop.stop()`` inside
+it: that will initiate shutdown.
 
 
 🤔 Why?
