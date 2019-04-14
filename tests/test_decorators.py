@@ -52,7 +52,6 @@ def test_sig_dec():
         "Bye!",
     ]
 
-    print(stdout)
     for item in expected:
         assert item in stdout
 
@@ -76,6 +75,5 @@ def test_sig_dec_call():
         "Bye!",
     ]
 
-    print(stdout)
     for item in expected:
         assert item in stdout
