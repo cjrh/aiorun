@@ -20,7 +20,7 @@ if sys.platform == "win32":
     pytest.skip("Windows doesn't use POSIX signals", allow_module_level=True)
 
 
-def kill(sig=SIGTERM, after=0.01):
+def kill(sig=SIGTERM, after=0.05):
     """Tool to send a signal after a pause"""
 
     def job():

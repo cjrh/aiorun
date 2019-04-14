@@ -1,18 +1,18 @@
-FROM python:3.7-stretch
+FROM python:3.7.3-slim-stretch
 
-RUN apt-get update
-RUN apt-get install -y vim less
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    vim \
+    less \
+    && rm -rf /var/lib/apt/lists/*
 
-VOLUME /opt/project
-
-#RUN mkdir /opt/project
-ADD . /opt/project
+COPY . /opt/project
 
 WORKDIR /opt/project
-RUN python3.7 -m pip install \
+RUN python -m pip install \
     -r requirements-test.txt \
     flit \
     pygments
-RUN FLIT_ROOT_INSTALL=1 flit install --pth-file
+RUN FLIT_ROOT_INSTALL=1 flit install -s
 
 CMD ["/bin/bash"]

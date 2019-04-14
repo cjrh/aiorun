@@ -4,11 +4,12 @@ import atexit
 import logging
 import signal
 import sys
+import inspect
 from asyncio import AbstractEventLoop, CancelledError, Task, gather, get_event_loop
 from concurrent.futures import Executor, ThreadPoolExecutor
 from functools import partial
 from signal import SIGINT, SIGTERM
-from typing import Callable, Optional
+from typing import Callable, Optional, Union, Awaitable
 from weakref import WeakSet
 
 try:  # pragma: no cover
@@ -114,7 +115,7 @@ def shutdown_waits_for(coro, loop=None):
 
 
 def run(
-    coro: "Optional[Coroutine]" = None,
+    coro: "Optional[Union[Coroutine, Callable[[...], Awaitable]]]" = None,
     *,
     loop: Optional[AbstractEventLoop] = None,
     shutdown_handler: Optional[Callable[[AbstractEventLoop], None]] = None,
@@ -125,8 +126,8 @@ def run(
     print("\n***\n")
 
     if asyncio.iscoroutine(coro):
-        # Not called as a decorator. Just call the main work function
-        # directly, passing all parameters as received.
+        # Not called as a decorator. This is the easy case. Just call the
+        # main work function directly, passing all parameters as received.
         return inner(
             coro,
             loop=loop,
@@ -136,12 +137,7 @@ def run(
             use_uvloop=use_uvloop,
         )
 
-    if asyncio.iscoroutinefunction(coro):
-        # Either used as a decorator (NOT called), or called directly but
-        # passing the coroutine function as a param. Either way, we'll
-        # call the coroutine function to make a coroutine, and then set
-        # up the main work function to be called upon "atexit"
-
+    def actual_decorator(coro):
         # When the given function is not in the __main__ module, just pass
         # it through as-is.
         dec = lambda coro: coro
@@ -161,34 +157,36 @@ def run(
                 use_uvloop=use_uvloop,
             )
 
-        return inner_
+    if asyncio.iscoroutinefunction(coro):
+        # Either used as a decorator (NOT called), or called directly but
+        # passing the coroutine function as a param. Either way, we'll
+        # call the coroutine function to make a coroutine, and then set
+        # up the main work function to be called upon "atexit"
+        return actual_decorator(coro)
 
     elif coro is None:
-        # Used as a decorator, and called with args. We have to return
-        # the actual decorator, which will receive a coroutine function
-        # as argument.
-
-        def decorator(f):
-            dec = lambda f: f
-            if f.__module__ == "__main__":
-                # But, when it is in __main__, set up things so that it'll get
-                # executed at __main__ module exit.
-                dec = atexit.register
-
-            @dec  # Schedule to run the loop at exit, with no coro
-            def inner_(*args, **kwargs):
-                return inner(
-                    f(*args, **kwargs),
-                    loop=loop,
-                    shutdown_handler=shutdown_handler,
-                    executor_workers=executor_workers,
-                    executor=executor,
-                    use_uvloop=use_uvloop,
-                )
-
-            return inner_
-
-        return decorator
+        # Either (1) used as a decorator and called with args, OR
+        # (2) not used as a decorator, but just called as-is. In the
+        # first scenario, we need to return the actual decorator to
+        # use, i.e., a function that receives another function.
+        # In the second scenario we need to actually start running the
+        # event loop.
+        print("coro is none")
+        frame = inspect.getframeinfo(inspect.currentframe().f_back, context=1)
+        print(frame)
+        if frame.code_context[0][0].startswith("@"):
+            print("decorator activated")
+            return actual_decorator
+        else:
+            print("just doing the normal thing")
+            return inner(
+                coro,
+                loop=loop,
+                shutdown_handler=shutdown_handler,
+                executor_workers=executor_workers,
+                executor=executor,
+                use_uvloop=use_uvloop,
+            )
 
 
 def inner(
@@ -331,6 +329,11 @@ def inner(
     # If loop was supplied, it's up to the caller to close!
     if not loop_was_supplied:
         logger.info("Closing the loop.")
+        # Python documentation says that "shutdown_asyncgens()" is new
+        # in 3.6, but it seems that 3.5.7 also has it. It probably got
+        # backported. Thus, we're not going to check for it, and just assume
+        # it is available.
+        loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()
     logger.critical("Leaving. Bye!")
 
