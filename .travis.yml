@@ -33,7 +33,7 @@ install:
     - "pip install -r requirements-test.txt"
     - "flit install"
 script:
-    PYTHONPATH=. py.test --verbose --fulltrace --cov aiorun tests/
+    PYTHONPATH=. py.test --verbose -s --fulltrace --cov aiorun tests/
 after_success:
     coveralls
 cache: pip
