@@ -29,7 +29,8 @@ def test_sig():
         "Bye!",
     ]
 
-    assert all(phrase in stdout for phrase in expected)
+    for item in expected:
+        assert item in stdout
 
 
 def test_sig_dec():
@@ -51,7 +52,8 @@ def test_sig_dec():
         "Bye!",
     ]
 
-    assert all(phrase in stdout for phrase in expected)
+    for item in expected:
+        assert item in stdout
 
 
 def test_sig_dec_call():
@@ -73,4 +75,5 @@ def test_sig_dec_call():
         "Bye!",
     ]
 
-    assert all(phrase in stdout for phrase in expected)
+    for item in expected:
+        assert item in stdout
