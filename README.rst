@@ -34,7 +34,7 @@
 
 Here's the big idea (how you use it):
 
-.. code-block:: python
+.. code-block:: python3
 
    import asyncio
    from aiorun import run
@@ -49,7 +49,7 @@ You don't have to bother with all that *if __name__ ==...* boilerplate: it'll
 just start up the loop and run your async function. If you prefer less magic,
 it also works the Old Fashioned Way:
 
-.. code-block:: python
+.. code-block:: python3
 
    import asyncio
    from aiorun import run
@@ -121,7 +121,7 @@ examples from the Standard Library documentation:
 
 **Client:**
 
-.. code-block:: python
+.. code-block:: python3
 
     # echo_client.py
     import asyncio
@@ -143,7 +143,7 @@ examples from the Standard Library documentation:
 
 **Server:**
 
-.. code-block:: python
+.. code-block:: python3
 
     import asyncio
     from aiorun import run
@@ -198,15 +198,13 @@ automatically.
 💨 Do you like `uvloop <https://github.com/magicstack/uvloop>`_?
 ------------------------------------------------------------------
 
-.. code-block:: python
+.. code-block:: python3
 
    import asyncio, aiorun
 
+   @aiorun.run(use_uvloop=True)
    async def main():
        <snip>
-
-   if __name__ == '__main__':
-       run(main(), use_uvloop=True)
 
 Note that you have to ``pip install uvloop`` yourself.
 
@@ -239,7 +237,7 @@ cancelled during the shutdown sequence, just wrap it in
 
 Here's an example:
 
-.. code-block:: python
+.. code-block:: python3
 
     import asyncio
     from aiorun import run, shutdown_waits_for
@@ -248,13 +246,12 @@ Here's an example:
         await asyncio.sleep(60)
         print('done!')
 
+    @run
     async def main():
         try:
             await shutdown_waits_for(corofn())
         except asyncio.CancelledError
             print('oh noes!')
-
-    run(main())
 
 If you hit ``CTRL-C`` *before* 60 seconds has passed, you will see
 ``oh noes!`` printed immediately, and then after 60 seconds (since start),
@@ -341,3 +338,51 @@ Finally, ``uvloop`` is not yet supported on Windows so that won't work
 either.
 
 At the very least, ``aiorun`` will, well, *run* on Windows ¯\\_(ツ)_/¯
+
+🛠️  Dev Instructions
+---------------------------
+
+A ``Dockerfile`` is included to make it a bit easier to do testing,
+especially on Windows. To build the image, do this:
+
+.. code-block:: bash
+
+    $ docker build -f test.dockerfile -t cjrh:aiorun-3.7.3-stretch .
+
+Then, to run the image, and mount your source checkout into the container,
+do the following. You will have to change paths to match your system:
+
+.. code-block:: bash
+
+    $ docker run --rm -it --name aioruntest \
+        -v /g/Documents/repos/aiorun:/opt/project \
+        cjrh:aiorun-3.7.3-stretch \
+        /bin/bash
+
+Two things: firstly, you will notice that I'm mounting my source into a
+directory called ``/opt/project``. The choice is generally arbitrary, but
+it turns out that PyCharm's docker support (remote interpreter) uses this
+directory inside the container by default, so I've started mimicking that.
+
+Secondly, when on Windows, I use the Git Bash shell as my terminal (the terminal
+is actually mintty), and there are *many* quirks that are quite painful to
+discover. I've found a few solutions to the typical problems; for example,
+the ``docker run`` command I showed above won't work on Windows in a
+Git bash mintty terminal. Instead, you have to do this:
+
+.. code-block:: bash
+
+    $ winpty docker run --rm -it --name aioruntest \
+        -v 'G:\Documents\repos\aiorun\':/opt/project \
+        cjrh:aiorun-3.7.3-stretch \
+        //bin/bash
+
+Yes, you really do need to:
+
+#. start with ``winpty``, if the run session must be interactive;
+#. quote your volume path on the host and use the Windows-style backslashes
+#. launch your command with a single, leading double-forward-slash (``//bin/bash``)
+#. ponder, "Were computers a mistake?" as your whisky swirls slowly over the crushed ice
+
+Once you're successfully inside the container, you should be able to just
+run ``pytest`` as you normally would.
