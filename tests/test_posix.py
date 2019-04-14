@@ -99,9 +99,7 @@ def test_sigint_pause():
     kill(SIGINT, after=0.05)
     # The second sigint should have no effect, because aiorun signal
     # handler disables itself after the first sigint received, above.
-    kill(SIGINT, after=0.07)
-    kill(SIGINT, after=0.08)
-    kill(SIGINT, after=0.09)
+    kill(SIGINT, after=0.1)
     newloop()
     run(main())
     assert items  # Verify that main() ran till completion.

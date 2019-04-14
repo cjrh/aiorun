@@ -124,8 +124,6 @@ def run(
     executor: Optional[Executor] = None,
     use_uvloop: bool = False
 ) -> None:
-    print("\n***\n")
-
     if asyncio.iscoroutine(coro):
         # Not called as a decorator. This is the easy case. Just call the
         # main work function directly, passing all parameters as received.
@@ -172,14 +170,10 @@ def run(
         # use, i.e., a function that receives another function.
         # In the second scenario we need to actually start running the
         # event loop.
-        print("coro is none")
         frame = inspect.getframeinfo(inspect.currentframe().f_back, context=1)
-        print(frame)
         if frame.code_context[0][0].startswith("@"):
-            print("decorator activated")
             return actual_decorator
         else:
-            print("just doing the normal thing")
             return inner(
                 coro,
                 loop=loop,

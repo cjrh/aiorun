@@ -38,7 +38,7 @@ def test_sig_dec():
     proc = sp.Popen(
         "python tests/fake_main_dec.py".split(), stdout=sp.PIPE, stderr=sp.STDOUT
     )
-    time.sleep(1.0)
+    time.sleep(0.5)
     os.kill(proc.pid, signal.SIGTERM)
     proc.wait(timeout=5)
     stdout = proc.stdout.read().decode()
@@ -62,7 +62,7 @@ def test_sig_dec_call():
     proc = sp.Popen(
         "python tests/fake_main_dec_call.py".split(), stdout=sp.PIPE, stderr=sp.STDOUT
     )
-    time.sleep(5.0)
+    time.sleep(0.5)
     os.kill(proc.pid, signal.SIGTERM)
     proc.wait(timeout=5)
     stdout = proc.stdout.read().decode()
