@@ -1,6 +1,5 @@
 .. contents:: Table of Contents
 
-
 .. image:: https://travis-ci.org/cjrh/aiorun.svg?branch=master
     :target: https://travis-ci.org/cjrh/aiorun
 
