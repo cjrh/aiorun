@@ -2,17 +2,12 @@
 import sys
 import logging
 import asyncio
-from asyncio import (
-    get_event_loop,
-    AbstractEventLoop,
-    Task,
-    gather,
-    CancelledError,
-)
+from asyncio import get_event_loop, AbstractEventLoop, Task, gather, CancelledError
 from concurrent.futures import Executor, ThreadPoolExecutor
 import signal
 from signal import SIGTERM, SIGINT
 from typing import Optional, Callable
+
 try:  # pragma: no cover
     # Coroutine only arrived in Python 3.5.3, and Ubuntu 16.04 is unfortunately
     # stuck on 3.5.2 for the time being. Revisit this in a year.
@@ -23,10 +18,10 @@ from weakref import WeakSet
 from functools import partial
 
 
-__all__ = ['run', 'shutdown_waits_for']
-__version__ = '2019.4.1'
-logger = logging.getLogger('aiorun')
-WINDOWS = sys.platform == 'win32'
+__all__ = ["run", "shutdown_waits_for"]
+__version__ = "2019.4.1"
+logger = logging.getLogger("aiorun")
+WINDOWS = sys.platform == "win32"
 
 try:
     # asyncio.Task.all_tasks is deprecated in favour of asyncio.all_tasks
@@ -117,12 +112,15 @@ def shutdown_waits_for(coro, loop=None):
     return inner()
 
 
-def run(coro: 'Optional[Coroutine]' = None, *,
-        loop: Optional[AbstractEventLoop] = None,
-        shutdown_handler: Optional[Callable[[AbstractEventLoop], None]] = None,
-        executor_workers: int = 10,
-        executor: Optional[Executor] = None,
-        use_uvloop: bool = False) -> None:
+def run(
+    coro: "Optional[Coroutine]" = None,
+    *,
+    loop: Optional[AbstractEventLoop] = None,
+    shutdown_handler: Optional[Callable[[AbstractEventLoop], None]] = None,
+    executor_workers: int = 10,
+    executor: Optional[Executor] = None,
+    use_uvloop: bool = False
+) -> None:
     """
     Start up the event loop, and wait for a signal to shut down.
 
@@ -147,7 +145,7 @@ def run(coro: 'Optional[Coroutine]' = None, *,
         is your responsibility to install uvloop. If missing, an
         ``ImportError`` will be raised.
     """
-    logger.debug('Entering run()')
+    logger.debug("Entering run()")
 
     assert not (loop and use_uvloop), (
         "'loop' and 'use_uvloop' parameters are mutually "
@@ -155,6 +153,7 @@ def run(coro: 'Optional[Coroutine]' = None, *,
     )
     if use_uvloop:
         import uvloop
+
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
     loop_was_supplied = bool(loop)
@@ -162,6 +161,7 @@ def run(coro: 'Optional[Coroutine]' = None, *,
         loop = get_event_loop()
 
     if coro:
+
         async def new_coro():
             """During shutdown, run_until_complete() will exit
             if a CancelledError bubbles up from anything in the
@@ -175,6 +175,7 @@ def run(coro: 'Optional[Coroutine]' = None, *,
                 await coro
             except asyncio.CancelledError:
                 pass
+
         loop.create_task(new_coro())
 
     shutdown_handler = shutdown_handler or _shutdown_handler
@@ -188,7 +189,7 @@ def run(coro: 'Optional[Coroutine]' = None, *,
         def windows_handler(sig, frame):
             # Disable the handler so it won't be called again.
             signame = signal.Signals(sig).name
-            logger.critical('Received signal: %s. Stopping the loop.', signame)
+            logger.critical("Received signal: %s. Stopping the loop.", signame)
             shutdown_handler(loop)
 
         signal.signal(signal.SIGBREAK, windows_handler)
@@ -201,20 +202,20 @@ def run(coro: 'Optional[Coroutine]' = None, *,
     # TODO: loop was supplied. (User might have put stuff on that loop's
     # TODO: executor).
     if not executor:
-        logger.debug('Creating default executor')
+        logger.debug("Creating default executor")
         executor = ThreadPoolExecutor(max_workers=executor_workers)
     loop.set_default_executor(executor)
     try:
         loop.run_forever()
     except KeyboardInterrupt:  # pragma: no cover
-        logger.info('Got KeyboardInterrupt')
+        logger.info("Got KeyboardInterrupt")
         if WINDOWS:
             # Windows doesn't do any POSIX signal handling, and no
             # abstraction layer for signals is currently implemented in
             # asyncio. So we fall back to KeyboardInterrupt (triggered
             # by the user/environment sending CTRL-C, or signal.CTRL_C_EVENT
             shutdown_handler()
-    logger.info('Entering shutdown phase.')
+    logger.info("Entering shutdown phase.")
 
     def sep():
         tasks = all_tasks(loop=loop)
@@ -227,9 +228,9 @@ def run(coro: 'Optional[Coroutine]' = None, *,
 
         tasks -= do_not_cancel
 
-        logger.info('Cancelling pending tasks.')
+        logger.info("Cancelling pending tasks.")
         for t in tasks:
-            logger.debug('Cancelling task: %s', t)
+            logger.debug("Cancelling task: %s", t)
             t.cancel()
         return tasks, do_not_cancel
 
@@ -241,18 +242,18 @@ def run(coro: 'Optional[Coroutine]' = None, *,
     # the gathered group will actually be complete. You need to
     # enable this with the ``return_exceptions`` flag.
     group = gather(*tasks, *do_not_cancel, return_exceptions=True)
-    logger.info('Running pending tasks till complete')
+    logger.info("Running pending tasks till complete")
     # TODO: obtain all the results, and log any results that are exceptions
     # other than CancelledError. Will be useful for troubleshooting.
     loop.run_until_complete(group)
 
-    logger.info('Waiting for executor shutdown.')
+    logger.info("Waiting for executor shutdown.")
     executor.shutdown(wait=True)
     # If loop was supplied, it's up to the caller to close!
     if not loop_was_supplied:
-        logger.info('Closing the loop.')
+        logger.info("Closing the loop.")
         loop.close()
-    logger.critical('Leaving. Bye!')
+    logger.critical("Leaving. Bye!")
 
 
 async def windows_support_wakeup():  # pragma: no cover
@@ -262,7 +263,7 @@ async def windows_support_wakeup():  # pragma: no cover
 
 
 def _shutdown_handler(loop):
-    logger.debug('Entering shutdown handler')
+    logger.debug("Entering shutdown handler")
     loop = loop or get_event_loop()
 
     # Disable the handlers so they won't be called again.
@@ -275,5 +276,5 @@ def _shutdown_handler(loop):
         loop.remove_signal_handler(SIGTERM)
         loop.add_signal_handler(SIGINT, lambda: None)
 
-    logger.critical('Stopping the loop')
+    logger.critical("Stopping the loop")
     loop.call_soon_threadsafe(loop.stop)

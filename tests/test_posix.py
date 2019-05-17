@@ -14,12 +14,13 @@ try:
 except ImportError:
     all_tasks = asyncio.Task.all_tasks
 
-if sys.platform == 'win32':
+if sys.platform == "win32":
     pytest.skip("Windows doesn't use POSIX signals", allow_module_level=True)
 
 
 def kill(sig=SIGTERM, after=0.01):
     """Tool to send a signal after a pause"""
+
     def job():
         pid = os.getpid()
         time.sleep(after)
@@ -37,6 +38,7 @@ def newloop():
 
 def test_sigterm():
     """Basic SIGTERM"""
+
     async def main():
         await asyncio.sleep(5.0)
 
@@ -48,6 +50,7 @@ def test_sigterm():
 
 def test_uvloop():
     """Basic SIGTERM"""
+
     async def main():
         await asyncio.sleep(0)
         asyncio.get_event_loop().stop()
@@ -138,7 +141,9 @@ def test_sigterm_enduring_ensure_future():
     assert items
 
 
-@pytest.mark.filterwarnings("ignore:coroutine 'shutdown_waits_for.<locals>.inner' was never awaited")
+@pytest.mark.filterwarnings(
+    "ignore:coroutine 'shutdown_waits_for.<locals>.inner' was never awaited"
+)
 def test_sigterm_enduring_bare():
     """Call `shutdown_waits_for() without await, or create_task(), or
     ensure_future(). It's just bare. This actually works (because of
@@ -186,7 +191,7 @@ def test_sigterm_enduring_await():
             # This append won't happen
             items.append(True)  # pragma: no cover.
         except asyncio.CancelledError:
-            print('main got cancelled')
+            print("main got cancelled")
             raise
 
     kill(SIGTERM, after=0.02)
