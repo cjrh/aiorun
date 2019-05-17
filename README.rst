@@ -1,4 +1,3 @@
-.. contents:: Table of Contents
 
 
 .. image:: https://travis-ci.org/cjrh/aiorun.svg?branch=master
@@ -25,6 +24,8 @@
 .. image:: https://img.shields.io/badge/calver-YYYY.MM.MINOR-22bfda.svg
     :target: http://calver.org/
 
+
+.. contents:: Table of Contents
 
 🏃 aiorun
 ======================
