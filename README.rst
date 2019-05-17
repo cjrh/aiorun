@@ -1,5 +1,4 @@
 
-
 .. image:: https://travis-ci.org/cjrh/aiorun.svg?branch=master
     :target: https://travis-ci.org/cjrh/aiorun
 
@@ -22,7 +21,16 @@
     :target: https://img.shields.io/pypi/v/aiorun.svg
 
 .. image:: https://img.shields.io/badge/calver-YYYY.MM.MINOR-22bfda.svg
+    :alt: This project uses calendar-based versioning scheme
     :target: http://calver.org/
+
+.. image:: https://pepy.tech/badge/aiorun
+    :alt: Downloads
+    :target: https://pepy.tech/project/black
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :alt: This project uses the "black" style formatter for Python code
+    :target: https://github.com/python/black
 
 
 .. contents:: Table of Contents
