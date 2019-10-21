@@ -1,0 +1,10 @@
+version: "3.7"
+services:
+  test37:
+    build:
+      context: .
+      dockerfile: test.dockerfile
+  test38:
+    build:
+      context: .
+      dockerfile: test38.dockerfile

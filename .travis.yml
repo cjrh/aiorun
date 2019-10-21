@@ -6,9 +6,7 @@ matrix:
   - python: "3.5"
   - python: "3.6"
   - python: "3.7"
-    dist: xenial
-  - python: '3.8-dev'
-    dist: xenial
+  - python: "3.8"
   - python: "nightly"
     dist: xenial
   - os: osx
@@ -23,11 +21,12 @@ matrix:
     language: sh
     python: "3.7"
     before_install:
-        - choco install python3
-        - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
+        - choco install python --version 3.8.0
+        - python -V
         - python -m venv venv
         - venv/Scripts/activate.bat
         - python -m pip install --upgrade pip wheel
+    env: PATH=/c/Python38:/c/Python38/Scripts:$PATH
 
 install:
     - "pip install -r requirements-test.txt"

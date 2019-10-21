@@ -48,6 +48,7 @@ def test_sigterm():
     assert not loop.is_closed()
 
 
+@pytest.mark.skipif(sys.version_info >= (3, 8), reason="uvloop not working on 3.8")
 def test_uvloop():
     """Basic SIGTERM"""
 
