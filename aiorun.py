@@ -28,7 +28,7 @@ try:
     # in Python 3.7; remove ImportError handling when we drop support for
     # 3.6.
     from asyncio import all_tasks
-except ImportError:
+except ImportError:  # pragma: no cover
     all_tasks = Task.all_tasks
 
 
