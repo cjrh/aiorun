@@ -24,10 +24,10 @@ matrix:
     python: "3.7"
     before_install:
         - choco install python3
-        - export PATH="/c/Python37:/c/Python37/Scripts:$PATH"
-        - python -m venv venv
+        - py -V
+        - py -m venv venv
         - venv/Scripts/activate.bat
-        - python -m pip install --upgrade pip wheel
+        - py -m pip install --upgrade pip wheel
 
 install:
     - "pip install -r requirements-test.txt"
