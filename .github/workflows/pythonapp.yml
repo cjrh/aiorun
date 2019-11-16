@@ -39,4 +39,4 @@ jobs:
           CI_BRANCH: ${{ env.GITHUB_REF }}
       if: matrix.os != 'windows-latest'
       run: |
-        coveralls -v
+        coveralls
