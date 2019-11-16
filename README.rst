@@ -1,4 +1,4 @@
-.. image:: https://github.com/cjrh/aiorun/workflows/pythonapp/badge.svg
+.. image:: https://github.com/cjrh/aiorun/workflows/Python%20application/badge.svg
     :target: https://github.com/cjrh/aiorun/actions
 
 .. image:: https://coveralls.io/repos/github/cjrh/aiorun/badge.svg?branch=master
