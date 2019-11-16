@@ -27,4 +27,4 @@ jobs:
     - name: Test with pytest
       run: |
         pip install pytest
-        pytest --verbose --fulltrace --cov aiorun tests/
+        PYTHONPATH=. pytest --verbose --fulltrace --cov aiorun tests/
