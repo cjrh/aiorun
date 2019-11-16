@@ -14,7 +14,8 @@ def test_exc_stop():
         await asyncio.sleep(10)
 
     async def main():
-        loop = asyncio.get_running_loop()
+        # loop = asyncio.get_running_loop()
+        loop = asyncio.get_event_loop()
         created_tasks.extend(loop.create_task(background_task()) for i in range(10))
         await asyncio.sleep(0.01)
         raise Exception("Stops the loop")
