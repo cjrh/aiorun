@@ -120,7 +120,7 @@ def run(
     executor_workers: int = 10,
     executor: Optional[Executor] = None,
     use_uvloop: bool = False,
-    stop_on_unhandled_errors: bool = False,
+    stop_on_unhandled_errors: bool = False
 ) -> None:
     """
     Start up the event loop, and wait for a signal to shut down.
