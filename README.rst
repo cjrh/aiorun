@@ -22,7 +22,7 @@
 
 .. image:: https://pepy.tech/badge/aiorun
     :alt: Downloads
-    :target: https://pepy.tech/project/black
+    :target: https://pepy.tech/project/aiorun
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :alt: This project uses the "black" style formatter for Python code
