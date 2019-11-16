@@ -1,8 +1,4 @@
-.. image:: https://travis-ci.org/cjrh/aiorun.svg?branch=master
-    :target: https://travis-ci.org/cjrh/aiorun
-
-.. image:: https://ci.appveyor.com/api/projects/status/fov7fixihcokvifl/branch/master?svg=true
-    :target: https://ci.appveyor.com/project/cjrh/aiorun
+[![Actions Status](https://github.com/cjrh/aiorun/workflows/pythonapp/badge.svg)](https://github.com/cjrh/aiorun/actions)
 
 .. image:: https://coveralls.io/repos/github/cjrh/aiorun/badge.svg?branch=master
     :target: https://coveralls.io/github/cjrh/aiorun?branch=master
