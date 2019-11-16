@@ -2,5 +2,5 @@ typing; python_version < '3.5'
 pytest==4.3.0
 pytest-cov
 coveralls
-uvloop; sys_platform != 'win32' and python_version < '3.8'
+uvloop; sys_platform != 'win32'
 flit
