@@ -110,14 +110,14 @@ def test_sigterm_enduring_create_task():
     items = []
 
     async def corofn():
-        await asyncio.sleep(0.02)
+        await asyncio.sleep(0.04)
         items.append(True)
 
     async def main():
         loop = asyncio.get_event_loop()
         loop.create_task(shutdown_waits_for(corofn()))
 
-    kill(SIGTERM, after=0.01)
+    kill(SIGTERM, after=0.02)
     newloop()
     run(main())
     assert items
