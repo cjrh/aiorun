@@ -36,4 +36,4 @@ jobs:
         pip install pytest
         flit install
         pytest --verbose --fulltrace --cov aiorun tests/
-        coveralls
+        coveralls -v
