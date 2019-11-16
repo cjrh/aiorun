@@ -1,4 +1,5 @@
-[![Actions Status](https://github.com/cjrh/aiorun/workflows/pythonapp/badge.svg)](https://github.com/cjrh/aiorun/actions)
+.. image:: https://github.com/cjrh/aiorun/workflows/pythonapp/badge.svg
+    :target: https://github.com/cjrh/aiorun/actions
 
 .. image:: https://coveralls.io/repos/github/cjrh/aiorun/badge.svg?branch=master
     :target: https://coveralls.io/github/cjrh/aiorun?branch=master
