@@ -39,6 +39,8 @@ jobs:
       env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           COVERALLS_GIT_BRANCH: "${{ github.ref }}"
+          GIT_BRANCH: "${{ github.ref }}"
+          COVERALLS_PARALLEL: "true"
       if: matrix.os == 'ubuntu-latest'
       run: |
         coveralls
