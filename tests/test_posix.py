@@ -48,7 +48,6 @@ def test_sigterm():
     assert not loop.is_closed()
 
 
-@pytest.mark.skipif(sys.version_info >= (3, 8), reason="uvloop not working on 3.8")
 def test_uvloop():
     """Basic SIGTERM"""
 
@@ -62,14 +61,12 @@ def test_uvloop():
 def test_no_coroutine():
     """Signal should still work without a main coroutine"""
     kill(SIGTERM)
-    newloop()
     run()
 
 
 def test_sigint():
     """Basic SIGINT"""
     kill(SIGINT)
-    newloop()
     run()
 
 
@@ -77,7 +74,6 @@ def test_exe():
     """Custom executor"""
     exe = ThreadPoolExecutor()
     kill(SIGTERM)
-    newloop()
     run(executor=exe)
 
 
@@ -99,7 +95,6 @@ def test_sigint_pause():
     # The second sigint should have no effect, because aiorun signal
     # handler disables itself after the first sigint received, above.
     kill(SIGINT, after=0.03)
-    newloop()
     run(main())
     assert items  # Verify that main() ran till completion.
 
@@ -118,7 +113,6 @@ def test_sigterm_enduring_create_task():
         loop.create_task(shutdown_waits_for(corofn()))
 
     kill(SIGTERM, after=0.02)
-    newloop()
     run(main())
     assert items
 
@@ -137,7 +131,6 @@ def test_sigterm_enduring_ensure_future():
         asyncio.ensure_future(shutdown_waits_for(corofn()))
 
     kill(SIGTERM, after=0.01)
-    newloop()
     run(main())
     assert items
 
@@ -163,7 +156,6 @@ def test_sigterm_enduring_bare():
         shutdown_waits_for(corofn())  # <-- Look Ma! No awaits!
 
     kill(SIGTERM, after=0.01)
-    newloop()
     run(main())
     assert items
 
@@ -196,7 +188,6 @@ def test_sigterm_enduring_await():
             raise
 
     kill(SIGTERM, after=0.02)
-    newloop()
     run(main())
 
     assert len(items) == 2
@@ -224,13 +215,12 @@ def test_sigterm_enduring_indirect_cancel():
 
     async def main():
         loop = asyncio.get_event_loop()
-        coro = corofn(sleep=0.02)
-        loop.call_later(0.01, direct_cancel)
+        coro = corofn(sleep=0.2)
+        loop.call_later(0.1, direct_cancel)
         with pytest.raises(asyncio.CancelledError):
             await shutdown_waits_for(coro)
 
-    kill(SIGTERM, after=0.03)
-    newloop()
+    kill(SIGTERM, after=0.3)
     run(main())
 
     assert len(items) == 0

@@ -23,5 +23,6 @@ def test_exc_stop():
     with pytest.raises(Exception) as excinfo:
         run(main(), stop_on_unhandled_errors=True)
 
+    print(excinfo.traceback)
     assert "Stops the loop" in str(excinfo.value)
     assert all(t.cancelled for t in created_tasks)
