@@ -119,7 +119,8 @@ def run(
     shutdown_handler: Optional[Callable[[AbstractEventLoop], None]] = None,
     executor_workers: int = 10,
     executor: Optional[Executor] = None,
-    use_uvloop: bool = False
+    use_uvloop: bool = False,
+    stop_on_unhandled_errors: bool = False
 ) -> None:
     """
     Start up the event loop, and wait for a signal to shut down.
@@ -144,6 +145,12 @@ def run(
     :param use_uvloop: The loop policy will be set to use uvloop. It
         is your responsibility to install uvloop. If missing, an
         ``ImportError`` will be raised.
+    :param stop_on_unhandled_errors: By default, the event loop will
+        handle any exceptions that get raised and are not handled. This
+        means that the event loop will continue running regardless of errors,
+        and the only way to stop it is to call `loop.stop()`. However, if
+        this flag is set, any unhandled exceptions will stop the loop, and
+        be re-raised after the normal shutdown sequence is completed.
     """
     logger.debug("Entering run()")
 
@@ -156,9 +163,29 @@ def run(
 
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
+    assert not (loop and stop_on_unhandled_errors), (
+        "'loop' and 'stop_on_unhandled_errors' parameters are mutually "
+        "exclusive. (If you need custom error handling, set that on your "
+        "own loop being provided."
+    )
+
     loop_was_supplied = bool(loop)
     if not loop_was_supplied:
-        loop = get_event_loop()
+        # loop = get_event_loop()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    pending_exception_to_raise = None
+
+    def custom_exception_handler(loop, context: dict):
+        """See: https://docs.python.org/3/library/asyncio-eventloop.html#error-handling-api"""
+        nonlocal pending_exception_to_raise
+        pending_exception_to_raise = context["exception"]
+        logger.error("Unhandled exception; stopping loop.")
+        loop.stop()
+
+    if stop_on_unhandled_errors:
+        loop.set_exception_handler(custom_exception_handler)
 
     if coro:
 
@@ -253,7 +280,11 @@ def run(
     if not loop_was_supplied:
         logger.info("Closing the loop.")
         loop.close()
-    logger.critical("Leaving. Bye!")
+    logger.info("Leaving. Bye!")
+
+    if pending_exception_to_raise:
+        logger.info("Reraising unhandled exception")
+        raise pending_exception_to_raise
 
 
 async def windows_support_wakeup():  # pragma: no cover

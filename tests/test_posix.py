@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 from aiorun import run, shutdown_waits_for, _DO_NOT_CANCEL_COROS
 import pytest
 
-# asyncio.Task.all_tasks is dperecated in favour of asyncio.all_tasks in Py3.7
+# asyncio.Task.all_tasks is deprecated in favour of asyncio.all_tasks in Py3.7
 try:
     from asyncio import all_tasks
 except ImportError:
@@ -110,14 +110,14 @@ def test_sigterm_enduring_create_task():
     items = []
 
     async def corofn():
-        await asyncio.sleep(0.02)
+        await asyncio.sleep(0.04)
         items.append(True)
 
     async def main():
         loop = asyncio.get_event_loop()
         loop.create_task(shutdown_waits_for(corofn()))
 
-    kill(SIGTERM, after=0.01)
+    kill(SIGTERM, after=0.02)
     newloop()
     run(main())
     assert items
