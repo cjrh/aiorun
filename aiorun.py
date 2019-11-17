@@ -60,7 +60,7 @@ def shutdown_waits_for(coro, loop=None):
 
     async def coro_proxy():
         """This function will await coro, but it will also send the result
-        over the the future. Remember: the outside caller (of
+        over to the future. Remember: the outside caller (of
         shutdown_waits_for) will be awaiting fut, NOT coro(), due to
         the decoupling. However, when coro completes, we need to send its
         result over to the fut to make it look *as if* it was just coro
@@ -162,6 +162,8 @@ def run(
         import uvloop
 
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    else:
+        asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
 
     assert not (loop and stop_on_unhandled_errors), (
         "'loop' and 'stop_on_unhandled_errors' parameters are mutually "
@@ -171,7 +173,6 @@ def run(
 
     loop_was_supplied = bool(loop)
     if not loop_was_supplied:
-        # loop = get_event_loop()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
@@ -278,6 +279,9 @@ def run(
     executor.shutdown(wait=True)
     # If loop was supplied, it's up to the caller to close!
     if not loop_was_supplied:
+        if sys.version_info >= (3, 6):
+            logger.info("Shutting down async generators")
+            loop.run_until_complete(loop.shutdown_asyncgens())
         logger.info("Closing the loop.")
         loop.close()
     logger.info("Leaving. Bye!")
