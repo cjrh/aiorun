@@ -44,7 +44,7 @@ jobs:
       env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           COVERALLS_PARALLEL: "true"
-          GIT_BRANCH: ${{ steps.extract_branch.outputs.branch }}
+          CI_BRANCH: ${{ steps.extract_branch.outputs.branch }}
       if: matrix.os == 'ubuntu-latest'
       run: |
         coveralls
