@@ -43,7 +43,10 @@ jobs:
     - name: Upload coverage
       env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-          COVERALLS_PARALLEL: "true"
+          # This will only work if we also send a "done" event after the
+          # whole job is finished.
+          # See: https://docs.coveralls.io/parallel-build-webhook
+          #COVERALLS_PARALLEL: "true"
           CI_BRANCH: ${{ steps.extract_branch.outputs.branch }}
       if: matrix.os == 'ubuntu-latest'
       run: |
