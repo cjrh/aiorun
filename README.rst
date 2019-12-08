@@ -149,13 +149,8 @@ examples from the Standard Library documentation:
     async def main():
         server = await asyncio.start_server(handle_echo, '127.0.0.1', 8888)
         print('Serving on {}'.format(server.sockets[0].getsockname()))
-        try:
-            # Wait for cancellation
-            while True:
-                await asyncio.sleep(10)
-        except asyncio.CancelledError:
-            server.close()
-            await server.wait_closed()
+        async with server:
+            await server.serve_forever()
 
     run(main())
 
