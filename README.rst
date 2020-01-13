@@ -181,7 +181,8 @@ automatically.
 
 .. code-block:: python
 
-   import asyncio, aiorun
+   import asyncio
+   from aiorun import run
 
    async def main():
        <snip>
