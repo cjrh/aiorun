@@ -154,10 +154,12 @@ def run(
     """
     logger.debug("Entering run()")
 
-    assert not (loop and use_uvloop), (
-        "'loop' and 'use_uvloop' parameters are mutually "
-        "exclusive. (Just make your own uvloop and pass it in)."
-    )
+    if loop and use_uvloop:
+        raise Exception(
+            "'loop' and 'use_uvloop' parameters are mutually "
+            "exclusive. (Just make your own uvloop and pass it in)."
+        )
+
     if use_uvloop:
         import uvloop
 
@@ -165,11 +167,12 @@ def run(
     else:
         asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
 
-    assert not (loop and stop_on_unhandled_errors), (
-        "'loop' and 'stop_on_unhandled_errors' parameters are mutually "
-        "exclusive. (If you need custom error handling, set that on your "
-        "own loop being provided."
-    )
+    if loop and stop_on_unhandled_errors:
+        raise Exception(
+            "'loop' and 'stop_on_unhandled_errors' parameters are mutually "
+            "exclusive. (If you need custom error handling, set that on your "
+            "own loop being provided.)"
+        )
 
     loop_was_supplied = bool(loop)
     if not loop_was_supplied:
