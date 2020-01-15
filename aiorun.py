@@ -192,22 +192,22 @@ def run(
         loop.set_exception_handler(custom_exception_handler)
 
     if coro:
-
-        async def new_coro():
-            """During shutdown, run_until_complete() will exit
-            if a CancelledError bubbles up from anything in the
-            group. To counteract that, we'll try to handle
-            any CancelledErrors that bubble up from the given
-            coro. This isn't fool-proof: if the user doesn't
-            provide a coro, and instead creates their own with
-            loop.create_task, that task might bubble
-            a CancelledError into the run_until_complete()."""
-            try:
-                await coro
-            except asyncio.CancelledError:
-                pass
-
-        loop.create_task(new_coro())
+        pass
+        # async def new_coro():
+        #     """During shutdown, run_until_complete() will exit
+        #     if a CancelledError bubbles up from anything in the
+        #     group. To counteract that, we'll try to handle
+        #     any CancelledErrors that bubble up from the given
+        #     coro. This isn't fool-proof: if the user doesn't
+        #     provide a coro, and instead creates their own with
+        #     loop.create_task, that task might bubble
+        #     a CancelledError into the run_until_complete()."""
+        #     try:
+        #         await coro
+        #     except asyncio.CancelledError:
+        #         pass
+        #
+        # loop.create_task(new_coro())
 
     shutdown_handler = shutdown_handler or _shutdown_handler
 
@@ -221,13 +221,13 @@ def run(
             # Disable the handler so it won't be called again.
             signame = signal.Signals(sig).name
             logger.critical("Received signal: %s. Stopping the loop.", signame)
-            shutdown_handler(loop)
+            shutdown_handler(loop, coro)
 
         signal.signal(signal.SIGBREAK, windows_handler)
         signal.signal(signal.SIGINT, windows_handler)
     else:
-        loop.add_signal_handler(SIGINT, shutdown_handler, loop)
-        loop.add_signal_handler(SIGTERM, shutdown_handler, loop)
+        loop.add_signal_handler(SIGINT, shutdown_handler, loop, coro)
+        loop.add_signal_handler(SIGTERM, shutdown_handler, loop, coro)
 
     # TODO: We probably don't want to create a different executor if the
     # TODO: loop was supplied. (User might have put stuff on that loop's
@@ -237,7 +237,7 @@ def run(
         executor = ThreadPoolExecutor(max_workers=executor_workers)
     loop.set_default_executor(executor)
     try:
-        loop.run_forever()
+        loop.run_until_complete(coro)
     except KeyboardInterrupt:  # pragma: no cover
         logger.info("Got KeyboardInterrupt")
         if WINDOWS:
@@ -300,7 +300,7 @@ async def windows_support_wakeup():  # pragma: no cover
         await asyncio.sleep(0.1)
 
 
-def _shutdown_handler(loop):
+def _shutdown_handler(loop, coro: Coroutine):
     logger.debug("Entering shutdown handler")
     loop = loop or get_event_loop()
 
@@ -315,4 +315,5 @@ def _shutdown_handler(loop):
         loop.add_signal_handler(SIGINT, lambda: None)
 
     logger.critical("Stopping the loop")
-    loop.call_soon_threadsafe(loop.stop)
+    coro.throw(CancelledError)
+    # loop.call_soon_threadsafe(loop.stop)
