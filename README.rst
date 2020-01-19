@@ -200,7 +200,7 @@ one new endpoint you just added has a bug: do you really want that one new
 endpoint to crash-loop your deployed service?
 
 Nevertheless, not all usages of ``aiorun`` are long-lived servers, so some
-uesrs would prefer that ``aiorun.run()`` crash on an unhandled exception,
+users would prefer that ``aiorun.run()`` crash on an unhandled exception,
 just like any normal Python program.  For this, we have an extra parameter
 that enables it:
 
