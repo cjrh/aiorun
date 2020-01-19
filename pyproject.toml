@@ -20,5 +20,9 @@ classifiers = [
 description-file = "README.rst"
 requires = ["typing; python_version < '3.5'"]
 requires-python = ">=3.5"
-dev-requires = ["pytest", "pytest-cov"]
 
+[tool.flit.metadata.requires-extra]
+dev = [
+    "pytest",
+    "pytest-cov"
+]

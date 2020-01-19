@@ -188,7 +188,7 @@ Task gathering, cancellation, and executor shutdown all happen
 automatically.
 
 🐛 Error Handling
---------------
+------------------
 
 Unlike the standard library's ``asyncio.run()`` method, ``aiorun.run``
 will run forever, and does not stop on unhandled exceptions. This is partly
