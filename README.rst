@@ -53,6 +53,17 @@ of your ``asyncio``-based application. The ``run()`` function will
 run forever. If you want to shut down when ``main()`` completes, just
 call ``loop.stop()`` inside it: that will initiate shutdown.
 
+.. warning::
+
+    Note that `aiorun.run(coro)` will run **forever**, unlike the standard
+    library's ``asyncio.run()`` helper. You can call `aiorun.run()`
+    without a coroutine parameter, and it will still run forever.
+
+    This is surprising to many people, because they sometimes expect that
+    unhandled exceptions should abort the program, with an exception and
+    a traceback. If you want this behaviour, please see the section on
+    *error handling* further down.
+
 
 🤔 Why?
 ----------------
@@ -175,6 +186,172 @@ when you hit ``CTRL-C`` on the server instance:
 
 Task gathering, cancellation, and executor shutdown all happen
 automatically.
+
+Error Handling
+--------------
+
+Unlike the standard library's ``asyncio.run()`` method, ``aiorun.run``
+will run forever, and does not stop on unhandled exceptions. This is partly
+because we predate the standard library method, during the time in which
+``run_forever()`` was actually the recommended API for servers, and partly
+because it can *make sense* for long-lived servers to be resilient to
+unhandled exceptions.  For example, if 99% of your API works fine, but the
+one new endpoint you just added has a bug: do you really want that one new
+endpoint to crash-loop your deployed service?
+
+Nevertheless, not all usages of ``aiorun`` are long-lived servers, so some
+uesrs would prefer that ``aiorun.run()`` crash on an unhandled exception,
+just like any normal Python program.  For this, we have an extra parameter
+that enables it:
+
+.. code-block:: python
+
+   # stop_demo.py
+   from aiorun import run
+
+   async def main():
+       raise Exception('ouch')
+
+   if __name__ == '__main__':
+       run(main(), stop_on_unhandled_errors=True)
+
+This produces the following output:
+
+.. code-block::
+
+    $ python stop_demo.py
+    Unhandled exception; stopping loop.
+    Traceback (most recent call last):
+      File "/opt/project/examples/stop_unhandled.py", line 9, in <module>
+        run(main(), stop_on_unhandled_errors=True)
+      File "/opt/project/aiorun.py", line 294, in run
+        raise pending_exception_to_raise
+      File "/opt/project/aiorun.py", line 206, in new_coro
+        await coro
+      File "/opt/project/examples/stop_unhandled.py", line 5, in main
+        raise Exception("ouch")
+    Exception: ouch
+
+Error handling scenarios can get very complex, and I suggest that you
+try to keep your error handling as simple as possible. Nevertheless, sometimes
+people have special needs that require some complexity, so let's look at a
+few scenarios where error-handling considerations can be more challenging.
+
+``aiorun.run()`` can also be started without an initial coroutine, in which
+case any other created tasks still run as normal; in this case exceptions
+still abort the program if the parameter is supplied:
+
+.. code-block:: python
+
+    import asyncio
+    from aiorun import run
+
+
+    async def job():
+        raise Exception("ouch")
+
+
+    if __name__ == "__main__":
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.create_task(job())
+
+        run(loop=loop, stop_on_unhandled_errors=True)
+
+The output is the same as the previous program. In this second example,
+we made a our own loop instance and passed that to ``run()``. It is also possible
+to configure your exception handler on the loop, but if you do this the
+``stop_on_unhandled_errors`` parameter is no longer allowed:
+
+.. code-block:: python
+
+    import asyncio
+    from aiorun import run
+
+
+    async def job():
+        raise Exception("ouch")
+
+
+    if __name__ == "__main__":
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.create_task(job())
+        loop.set_exception_handler(lambda loop, context: "Error")
+
+        run(loop=loop, stop_on_unhandled_errors=True)
+
+But this is not allowed:
+
+.. code-block::
+
+    Traceback (most recent call last):
+      File "/opt/project/examples/stop_unhandled_illegal.py", line 15, in <module>
+        run(loop=loop, stop_on_unhandled_errors=True)
+      File "/opt/project/aiorun.py", line 171, in run
+        raise Exception(
+    Exception: If you provide a loop instance, and you've configured a
+    custom exception handler on it, then the 'stop_on_unhandled_errors'
+    parameter is unavailable (all exceptions will be handled).
+    /usr/local/lib/python3.8/asyncio/base_events.py:633:
+        RuntimeWarning: coroutine 'job' was never awaited
+
+Remember that the parameter ``stop_on_unhandled_errors`` is just a convenience. If you're
+going to go to the trouble of making your own loop instance anyway, you can
+stop the loop yourself inside your own exception handler just fine, and
+then you no longer need to set ``stop_on_unhandled_errors``:
+
+.. code-block:: python
+
+    # custom_stop.py
+    import asyncio
+    from aiorun import run
+
+
+    async def job():
+        raise Exception("ouch")
+
+
+    async def other_job():
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            print("other_job was cancelled!")
+
+
+    if __name__ == "__main__":
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.create_task(job())
+        loop.create_task(other_job())
+
+        def handler(loop, context):
+            # https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.call_exception_handler
+            print(f'Stopping loop due to error: {context["exception"]} ')
+            loop.stop()
+
+        loop.set_exception_handler(handler=handler)
+
+        run(loop=loop)
+
+In this example, we schedule two jobs on the loop. One of them raises an
+exception, and you can see in the output that the other job was still
+cancelled during shutdown as expected (which is what you expect ``aiorun``
+to do!):
+
+.. code-block::
+
+    $ python custom_stop.py
+    Stopping loop due to error: ouch
+    other_job was cancelled!
+
+Note however that in this situation the exception is being *handled* by
+your custom exception handler, and does not bubble up out of the ``run()``
+like you saw in earlier examples. If you want to do something with that
+exception, like reraise it or something, you need to capture it inside your
+custom exception handler and then do something with it, like add it to a list
+that you check after ``run()`` completes, and then reraise there or something
+similar.
 
 💨 Do you like `uvloop <https://github.com/magicstack/uvloop>`_?
 ------------------------------------------------------------------
