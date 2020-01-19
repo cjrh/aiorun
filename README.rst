@@ -187,7 +187,7 @@ when you hit ``CTRL-C`` on the server instance:
 Task gathering, cancellation, and executor shutdown all happen
 automatically.
 
-Error Handling
+🐛 Error Handling
 --------------
 
 Unlike the standard library's ``asyncio.run()`` method, ``aiorun.run``
