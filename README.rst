@@ -53,18 +53,16 @@ of your ``asyncio``-based application. The ``run()`` function will
 run forever. If you want to shut down when ``main()`` completes, just
 call ``loop.stop()`` inside it: that will initiate shutdown.
 
-.. raw:: html
+.. WARNING::
+    Note that `aiorun.run(coro)` will run **forever**, unlike the standard
+    library's ``asyncio.run()`` helper. You can call `aiorun.run()`
+    without a coroutine parameter, and it will still run forever.
 
-    <div style="border: 2px solid black;border-radius: 15px;padding: 10px;background-color: lightyellow;margin: 0 10% 0 10%;">
-    <p>Warning</p>
-    <p>Note that aiorun.run(coro) will run <strong>forever</strong>, unlike the standard
-    library's <code>asyncio.run()</code> helper. You can call aiorun.run()
-    without a coroutine parameter, and it will still run forever.</p>
-    <p>This is surprising to many people, because they sometimes expect that
+    This is surprising to many people, because they sometimes expect that
     unhandled exceptions should abort the program, with an exception and
     a traceback. If you want this behaviour, please see the section on
-    <em>error handling</em> further down.</p>
-    </div>
+    *error handling* further down.
+
 
 🤔 Why?
 ----------------
