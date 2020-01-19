@@ -14,7 +14,7 @@
     :target: https://img.shields.io/badge/install-pip%20install%20aiorun-ff69b4.svg
 
 .. image:: https://img.shields.io/pypi/v/aiorun.svg
-    :target: https://img.shields.io/pypi/v/aiorun.svg
+    :target: https://pypi.org/project/aiorun/
 
 .. image:: https://img.shields.io/badge/calver-YYYY.MM.MINOR-22bfda.svg
     :alt: This project uses calendar-based versioning scheme
