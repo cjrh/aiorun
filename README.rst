@@ -384,12 +384,12 @@ Let me explain: if you do a conventional shutdown sequence (like ``aiorun``
 is doing internally), this is the sequence of steps:
 
 - ``tasks = all_tasks()``, followed by
-- ``group = gather(*tasks)``, and then
-- ``group.cancel()``
+- ``[t.cancel() for t in tasks]``, and then
+- ``run_until_complete(gather(*tasks))``
 
 The way ``shield()`` works internally is it creates a *secret, inner*
 task—which also gets included in the ``all_tasks()`` call above! Thus
-it also receives a cancellation signal just like everything else.
+it also receives a cancellation exception just like everything else.
 
 Therefore, we have an alternative version of ``shield()`` that works better for
 us: ``shutdown_waits_for()``. If you've got a coroutine that must **not** be
