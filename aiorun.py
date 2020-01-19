@@ -167,11 +167,11 @@ def run(
     else:
         asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
 
-    if loop and stop_on_unhandled_errors:
+    if loop and loop.get_exception_handler() and stop_on_unhandled_errors:
         raise Exception(
-            "'loop' and 'stop_on_unhandled_errors' parameters are mutually "
-            "exclusive. (If you need custom error handling, set that on your "
-            "own loop being provided.)"
+            "If you provide a loop instance, and you've configured a custom "
+            "exception handler on it, then the 'stop_on_unhandled_errors' "
+            "parameter is unavailable (all exceptions will be handled)."
         )
 
     loop_was_supplied = bool(loop)
