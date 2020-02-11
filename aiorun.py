@@ -184,7 +184,7 @@ def run(
     def custom_exception_handler(loop, context: dict):
         """See: https://docs.python.org/3/library/asyncio-eventloop.html#error-handling-api"""
         nonlocal pending_exception_to_raise
-        pending_exception_to_raise = context["exception"]
+        pending_exception_to_raise = context.get("exception")
         logger.error("Unhandled exception; stopping loop.")
         loop.stop()
 
