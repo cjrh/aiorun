@@ -1,6 +1,6 @@
 typing; python_version < '3.5'
 pytest==4.3.0
 pytest-cov
-coveralls
+coveralls==1.10.0
 uvloop; sys_platform != 'win32'
 flit
