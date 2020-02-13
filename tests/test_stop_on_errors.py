@@ -32,16 +32,16 @@ class _TestException(Exception):
     pass
 
 
-@pytest.mark.parametrize('context, raised_exc', [
-    (
-        {'message': 'test error'},
-        None,
-    ),
-    (
-        {'message': 'test error', 'exception': _TestException('test error')},
-        _TestException,
-    ),
-])
+@pytest.mark.parametrize(
+    "context, raised_exc",
+    [
+        ({"message": "test error"}, None),
+        (
+            {"message": "test error", "exception": _TestException("test error")},
+            _TestException,
+        ),
+    ],
+)
 def test_call_exception_handler(context, raised_exc):
     """Test when loop's exception handler was called with custom context"""
     created_tasks = []
