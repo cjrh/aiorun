@@ -160,12 +160,18 @@ def run(
             "exclusive. (Just make your own uvloop and pass it in)."
         )
 
-    if use_uvloop:
-        import uvloop
+    loop_was_supplied = bool(loop)
 
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-    else:
-        asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+    if not loop_was_supplied:
+        if use_uvloop:
+            import uvloop
+
+            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        else:
+            asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
 
     if loop and loop.get_exception_handler() and stop_on_unhandled_errors:
         raise Exception(
@@ -173,11 +179,6 @@ def run(
             "exception handler on it, then the 'stop_on_unhandled_errors' "
             "parameter is unavailable (all exceptions will be handled)."
         )
-
-    loop_was_supplied = bool(loop)
-    if not loop_was_supplied:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
 
     pending_exception_to_raise = None
 
