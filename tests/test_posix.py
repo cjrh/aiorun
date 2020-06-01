@@ -224,3 +224,27 @@ def test_sigterm_enduring_indirect_cancel():
     run(main())
 
     assert len(items) == 0
+
+
+def test_shutdown_callback():
+    graceful = False
+    fut = None
+
+    async def _main():
+        nonlocal fut, graceful
+
+        fut = asyncio.Future()
+        await fut
+
+        graceful = True
+
+    async def main():
+        await shutdown_waits_for(_main())
+
+    def shutdown_callback(loop):
+        fut.set_result(None)
+
+    kill(SIGTERM, 0.3)
+    run(main(), shutdown_callback=shutdown_callback)
+
+    assert graceful

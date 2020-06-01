@@ -117,6 +117,7 @@ def run(
     *,
     loop: Optional[AbstractEventLoop] = None,
     shutdown_handler: Optional[Callable[[AbstractEventLoop], None]] = None,
+    shutdown_callback: Optional[Callable[[AbstractEventLoop], None]] = None,
     executor_workers: int = 10,
     executor: Optional[Executor] = None,
     use_uvloop: bool = False,
@@ -137,6 +138,9 @@ def run(
         sequence. Alternatively you can supply your own shutdown
         handler function. It should conform to the type spec as shown
         in the function signature.
+    :param shutdown_callback: Callable, executed after loop is stopped, before
+        cancelling any tasks.
+        Useful for graceful shutdown.
     :param executor_workers: The number of workers in the executor.
         (NOTE: ``run()`` creates a new executor instance internally,
         regardless of whether you supply your own loop.)
@@ -248,6 +252,13 @@ def run(
             # by the user/environment sending CTRL-C, or signal.CTRL_C_EVENT
             shutdown_handler()
     logger.info("Entering shutdown phase.")
+
+    if shutdown_callback is not None:
+        logger.info("Executing provided shutdown_callback.")
+        try:
+            shutdown_callback(loop)
+        except BaseException as exc:
+            logger.critical("%r failed hard.", shutdown_callback, exc_info=exc)
 
     def sep():
         tasks = all_tasks(loop=loop)
