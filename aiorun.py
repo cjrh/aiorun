@@ -140,7 +140,7 @@ def run(
         in the function signature.
     :param shutdown_callback: Callable, executed after loop is stopped, before
         cancelling any tasks.
-        Useful for graceful shutdown should.
+        Useful for graceful shutdown.
     :param executor_workers: The number of workers in the executor.
         (NOTE: ``run()`` creates a new executor instance internally,
         regardless of whether you supply your own loop.)
