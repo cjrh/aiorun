@@ -85,10 +85,10 @@ def test_sig_pause():
     # The first sigint triggers shutdown mode, so all tasks are cancelled.
     # Note that main() catches CancelledError, and does a little bit more
     # work before exiting.
-    kill(SIGTERM, after=0.04)
+    kill(SIGINT, after=0.04)
     # The second sigint should have no effect, because aiorun signal
     # handler disables itself after the first sigint received, above.
-    kill(SIGTERM, after=0.08)
+    kill(SIGINT, after=0.08)
     run(main())
     assert items  # Verify that main() ran till completion.
 
