@@ -250,7 +250,7 @@ def run(
             # abstraction layer for signals is currently implemented in
             # asyncio. So we fall back to KeyboardInterrupt (triggered
             # by the user/environment sending CTRL-C, or signal.CTRL_C_EVENT
-            shutdown_handler()
+            shutdown_handler(loop)
     logger.info("Entering shutdown phase.")
 
     if shutdown_callback is not None:
