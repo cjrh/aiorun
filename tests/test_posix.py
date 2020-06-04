@@ -71,7 +71,7 @@ def test_exe():
     run(executor=exe)
 
 
-def test_sigint_pause():
+def test_sig_pause():
     """Trying to send multiple signals."""
     items = []
 
@@ -79,16 +79,16 @@ def test_sigint_pause():
         try:
             await asyncio.sleep(5.0)
         except asyncio.CancelledError:
-            await asyncio.sleep(0.04)
+            await asyncio.sleep(0.1)
             items.append(True)
 
     # The first sigint triggers shutdown mode, so all tasks are cancelled.
     # Note that main() catches CancelledError, and does a little bit more
     # work before exiting.
-    kill(SIGINT, after=0.02)
+    kill(SIGTERM, after=0.04)
     # The second sigint should have no effect, because aiorun signal
     # handler disables itself after the first sigint received, above.
-    kill(SIGINT, after=0.03)
+    kill(SIGTERM, after=0.08)
     run(main())
     assert items  # Verify that main() ran till completion.
 
