@@ -258,7 +258,14 @@ def run(
         try:
             shutdown_callback(loop)
         except BaseException as exc:
-            logger.critical("%r failed hard.", shutdown_callback, exc_info=exc)
+            if pending_exception_to_raise:
+                logger.exception(
+                    "The shutdown_callback() raised an error, but there is "
+                    "already a different exception raised from the loop, so "
+                    "this log message is all you're going to see about it."
+                )
+            else:
+                pending_exception_to_raise = exc
 
     def sep():
         tasks = all_tasks(loop=loop)

@@ -248,3 +248,15 @@ def test_shutdown_callback():
     run(main(), shutdown_callback=shutdown_callback)
 
     assert graceful
+
+
+def test_shutdown_callback_error():
+    async def main():
+        await asyncio.sleep(1e-3)
+
+    def shutdown_callback(loop):
+        raise Exception("blah")
+
+    kill(SIGTERM, 0.3)
+    with pytest.raises(Exception, match="blah"):
+        run(main(), shutdown_callback=shutdown_callback)
