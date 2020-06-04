@@ -64,12 +64,6 @@ def test_no_coroutine():
     run()
 
 
-def test_sigint():
-    """Basic SIGINT"""
-    kill(SIGINT)
-    run()
-
-
 def test_exe():
     """Custom executor"""
     exe = ThreadPoolExecutor()
@@ -97,6 +91,12 @@ def test_sigint_pause():
     kill(SIGINT, after=0.03)
     run(main())
     assert items  # Verify that main() ran till completion.
+
+
+def test_sigint():
+    """Basic SIGINT"""
+    kill(SIGINT)
+    run()
 
 
 def test_sigterm_enduring_create_task():
