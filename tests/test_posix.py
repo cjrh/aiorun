@@ -260,3 +260,39 @@ def test_shutdown_callback_error():
     kill(SIGTERM, 0.3)
     with pytest.raises(Exception, match="blah"):
         run(main(), shutdown_callback=shutdown_callback)
+
+
+def test_shutdown_callback_error_and_main_error(caplog):
+    async def main():
+        await asyncio.sleep(1e-3)
+        raise Exception("main")
+
+    def shutdown_callback(loop):
+        raise Exception("blah")
+
+    kill(SIGTERM, 0.3)
+    with pytest.raises(Exception, match="main"):
+        run(main(), stop_on_unhandled_errors=True, shutdown_callback=shutdown_callback)
+
+    assert any(
+        "shutdown_callback() raised an error" in r.message for r in caplog.records
+    )
+
+
+def test_mutex_loop_and_use_uvloop():
+    async def main():
+        pass
+
+    with pytest.raises(Exception, match="mutually exclusive"):
+        run(main(), loop=newloop(), use_uvloop=True)
+
+
+def test_mutex_exc_handler_and_stop_unhandled():
+    async def main():
+        pass
+
+    loop = newloop()
+    loop.set_exception_handler(lambda loop, ctx: None)
+
+    with pytest.raises(Exception, match="parameter is unavailable"):
+        run(main(), loop=loop, stop_on_unhandled_errors=True)
