@@ -7,6 +7,8 @@ from signal import SIGINT, SIGTERM
 from concurrent.futures import ThreadPoolExecutor
 from aiorun import run, shutdown_waits_for, _DO_NOT_CANCEL_COROS
 import pytest
+import multiprocessing as mp
+from contextlib import contextmanager
 
 # asyncio.Task.all_tasks is deprecated in favour of asyncio.all_tasks in Py3.7
 try:
@@ -34,6 +36,42 @@ def newloop():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     return loop
+
+
+def main(q: mp.Queue):
+    async def main():
+        q.put("ok")
+        await asyncio.sleep(5.0)
+
+    run(main())
+
+
+@pytest.fixture()
+def mpproc():
+    @contextmanager
+    def run_proc(target):
+        q = mp.Queue()
+        p = mp.Process(target=target, args=(q,))
+        p.start()
+        try:
+            yield p, q
+        finally:
+            p.close()
+
+    return run_proc
+
+
+@pytest.mark.parametrize("signal", [SIGTERM, SIGINT])
+def test_sigterm_mp(mpproc, signal):
+    """Basic SIGTERM"""
+
+    with mpproc(target=main) as (p, q):
+        ok = q.get()
+        assert ok == "ok"
+        os.kill(p.pid, SIGTERM)
+        p.join(1.0)
+        assert not p.is_alive()
+        assert p.exitcode == 0
 
 
 def test_sigterm():
