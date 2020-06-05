@@ -56,7 +56,8 @@ def mpproc():
         try:
             yield p, q
         finally:
-            p.close()
+            if sys.version_info >= (3, 6):
+                p.close()
 
     return run_proc
 
