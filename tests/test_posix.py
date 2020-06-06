@@ -66,8 +66,6 @@ def main(q: mp.Queue, **kwargs):
     else:
         exe = None
 
-    exe = None
-
     run(main(), executor=exe, **kwargs)
     q.put(None)
     q.join()
@@ -88,7 +86,7 @@ def test_sigterm_mp(mpproc, signal, use_uvloop, use_exe):
         assert not items
 
 
-def main_no_coro(q: mp.Queue, **kwargs):
+def main_no_coro(q: mp.Queue):
     run()
     q.put(None)
     q.join()
@@ -97,7 +95,7 @@ def main_no_coro(q: mp.Queue, **kwargs):
 def test_no_coroutine(mpproc):
     """Signal should still work without a main coroutine"""
     with mpproc(target=main_no_coro) as (p, q):
-        time.sleep(0.3)
+        time.sleep(0.5)
         os.kill(p.pid, SIGTERM)
         assert drain_queue(q) == []
 
@@ -302,7 +300,7 @@ def main_shutdown_callback_error(q: mp.Queue):
 
 def test_shutdown_callback_error(mpproc):
     with mpproc(target=main_shutdown_callback_error) as (p, q):
-        time.sleep(0.3)
+        time.sleep(0.5)
         os.kill(p.pid, SIGTERM)
         items = drain_queue(q)
         assert isinstance(items[0], Exception)
@@ -344,7 +342,7 @@ def test_shutdown_callback_error_and_main_error(mpproc):
     with mpproc(
         target=main_shutdown_callback_error_and_main_error, expected_exit_code=1
     ) as (p, q):
-        time.sleep(0.3)
+        time.sleep(0.5)
         os.kill(p.pid, SIGTERM)
         items = drain_queue(q)
         assert isinstance(items[0], Exception)
