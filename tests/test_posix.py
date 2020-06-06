@@ -52,7 +52,7 @@ def mpproc():
             if p.exitcode != expected_exit_code:
                 raise ValueError("Process exitcode was %s" % p.exitcode)
 
-            if sys.version_info >= (3, 6):
+            if sys.version_info >= (3, 7):
                 p.close()
 
     return run_proc
