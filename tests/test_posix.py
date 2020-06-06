@@ -71,8 +71,8 @@ def main(q: mp.Queue, **kwargs):
     q.join()
 
 
+# @pytest.mark.parametrize("use_exe", [False, True])
 @pytest.mark.parametrize("use_uvloop", [False, True])
-@pytest.mark.parametrize("use_exe", [False, True])
 @pytest.mark.parametrize("signal", [SIGTERM, SIGINT])
 def test_sigterm_mp(mpproc, signal, use_uvloop, use_exe):
     """Basic SIGTERM"""
