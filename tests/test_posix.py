@@ -95,6 +95,8 @@ def main_no_coro(q: mp.Queue):
 def test_no_coroutine(mpproc):
     """Signal should still work without a main coroutine"""
     with mpproc(target=main_no_coro) as (p, q):
+        # TODO: with multiprocessing set_start_method=spawn, lowering this
+        #  detail causes hanging. Still unclear why.
         time.sleep(0.5)
         os.kill(p.pid, SIGTERM)
         assert drain_queue(q) == []
@@ -300,6 +302,8 @@ def main_shutdown_callback_error(q: mp.Queue):
 
 def test_shutdown_callback_error(mpproc):
     with mpproc(target=main_shutdown_callback_error) as (p, q):
+        # TODO: with multiprocessing set_start_method=spawn, lowering this
+        #  detail causes hanging. Still unclear why.
         time.sleep(0.5)
         os.kill(p.pid, SIGTERM)
         items = drain_queue(q)
@@ -342,6 +346,8 @@ def test_shutdown_callback_error_and_main_error(mpproc):
     with mpproc(
         target=main_shutdown_callback_error_and_main_error, expected_exit_code=1
     ) as (p, q):
+        # TODO: with multiprocessing set_start_method=spawn, lowering this
+        #  detail causes hanging. Still unclear why.
         time.sleep(0.5)
         os.kill(p.pid, SIGTERM)
         items = drain_queue(q)
