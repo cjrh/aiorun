@@ -60,24 +60,38 @@ def main(q: mp.Queue, **kwargs):
         q.put("ok")
         await asyncio.sleep(5.0)
 
-    use_exe = kwargs.pop("use_exe", None)
-    if use_exe:
+    if kwargs.pop("use_exe", None):
         exe = ThreadPoolExecutor()
     else:
         exe = None
 
-    run(main(), executor=exe, **kwargs)
-    q.put(None)
-    q.join()
+    loop = None
+    if kwargs.pop("user_supplied_loop", None) and not kwargs.get("use_uvloop"):
+        loop = newloop()
+
+    try:
+        run(main(), executor=exe, loop=loop, **kwargs)
+    finally:
+        q.put(None)
+        q.join()
 
 
+@pytest.mark.parametrize("user_supplied_loop", [False, True])
 @pytest.mark.parametrize("use_exe", [False, True])
 @pytest.mark.parametrize("use_uvloop", [False, True])
 @pytest.mark.parametrize("signal", [SIGTERM, SIGINT])
-def test_sigterm_mp(mpproc, signal, use_uvloop, use_exe):
+def test_sigterm_mp(mpproc, signal, use_uvloop, use_exe, user_supplied_loop):
     """Basic SIGTERM"""
 
-    with mpproc(target=main, use_uvloop=use_uvloop, use_exe=use_exe) as (p, q):
+    with mpproc(
+        target=main,
+        use_uvloop=use_uvloop,
+        use_exe=use_exe,
+        user_supplied_loop=user_supplied_loop,
+    ) as (
+        p,
+        q,
+    ):
         ok = q.get()
         q.task_done()
         assert ok == "ok"
