@@ -2,7 +2,6 @@ import sys
 import asyncio
 import os
 import time
-import threading
 from signal import SIGINT, SIGTERM
 from concurrent.futures import ThreadPoolExecutor
 from typing import List
@@ -12,8 +11,6 @@ import pytest
 import multiprocessing as mp
 from contextlib import contextmanager
 
-if __name__ == "__main__":
-    mp.set_start_method("spawn")
 
 # asyncio.Task.all_tasks is deprecated in favour of asyncio.all_tasks in Py3.7
 try:
