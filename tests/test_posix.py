@@ -5,31 +5,24 @@ import time
 import threading
 from signal import SIGINT, SIGTERM
 from concurrent.futures import ThreadPoolExecutor
+from typing import List
+
 from aiorun import run, shutdown_waits_for, _DO_NOT_CANCEL_COROS
 import pytest
 import multiprocessing as mp
 from contextlib import contextmanager
 
+if __name__ == "__main__":
+    mp.set_start_method("spawn")
+
 # asyncio.Task.all_tasks is deprecated in favour of asyncio.all_tasks in Py3.7
 try:
     from asyncio import all_tasks
-except ImportError:
+except ImportError:  # pragma: no cover
     all_tasks = asyncio.Task.all_tasks
 
-if sys.platform == "win32":
+if sys.platform == "win32":  # pragma: no cover
     pytest.skip("Windows doesn't use POSIX signals", allow_module_level=True)
-
-
-def kill(sig=SIGTERM, after=0.01):
-    """Tool to send a signal after a pause"""
-
-    def job():
-        pid = os.getpid()
-        time.sleep(after)
-        os.kill(pid, sig)
-
-    t = threading.Thread(target=job)
-    t.start()
 
 
 def newloop():
@@ -38,208 +31,180 @@ def newloop():
     return loop
 
 
-def main(q: mp.Queue):
-    async def main():
-        q.put("ok")
-        await asyncio.sleep(5.0)
-
-    run(main())
-
-
 @pytest.fixture()
 def mpproc():
     @contextmanager
-    def run_proc(target):
-        q = mp.Queue()
-        p = mp.Process(target=target, args=(q,))
+    def run_proc(target, expected_exit_code=0, allowed_shutdown_delay=5.0, **kwargs):
+        q = mp.JoinableQueue()
+        p = mp.Process(target=target, args=(q,), kwargs=kwargs)
         p.start()
         try:
             yield p, q
         finally:
+            # Wait a bit for the subprocess to finish.
+            p.join(allowed_shutdown_delay)
+            # The subprocess should never be alive here. If it is, kill
+            # it and raise.
+            if p.is_alive():
+                p.terminate()
+                raise ValueError("Process was alive but should not be.")
+
+            if p.exitcode != expected_exit_code:
+                raise ValueError("Process exitcode was %s" % p.exitcode)
+
             if sys.version_info >= (3, 6):
                 p.close()
 
     return run_proc
 
 
-@pytest.mark.parametrize("signal", [SIGTERM, SIGINT])
-def test_sigterm_mp(mpproc, signal):
-    """Basic SIGTERM"""
-
-    with mpproc(target=main) as (p, q):
-        ok = q.get()
-        assert ok == "ok"
-        os.kill(p.pid, SIGTERM)
-        p.join(1.0)
-        assert not p.is_alive()
-        assert p.exitcode == 0
-
-
-def test_sigterm():
-    """Basic SIGTERM"""
-
+def main(q: mp.Queue, **kwargs):
     async def main():
+        q.put("ok")
         await asyncio.sleep(5.0)
 
-    kill(SIGTERM)
-    loop = newloop()
-    run(main(), loop=loop)
-    assert not loop.is_closed()
+    use_exe = kwargs.pop("use_exe", None)
+    if use_exe:
+        exe = ThreadPoolExecutor()
+    else:
+        exe = None
+
+    run(main(), executor=exe, **kwargs)
+    q.put(None)
+    q.join()
 
 
-def test_uvloop():
+@pytest.mark.parametrize("use_uvloop", [False, True])
+@pytest.mark.parametrize("use_exe", [False, True])
+@pytest.mark.parametrize("signal", [SIGTERM, SIGINT])
+def test_sigterm_mp(mpproc, signal, use_uvloop, use_exe):
     """Basic SIGTERM"""
 
-    async def main():
-        await asyncio.sleep(0)
-        asyncio.get_event_loop().stop()
+    with mpproc(target=main, use_uvloop=use_uvloop, use_exe=use_exe) as (p, q):
+        ok = q.get()
+        q.task_done()
+        assert ok == "ok"
+        os.kill(p.pid, SIGTERM)
+        items = drain_queue(q)
+        assert not items
 
-    run(main(), use_uvloop=True)
 
-
-def test_no_coroutine():
-    """Signal should still work without a main coroutine"""
-    kill(SIGTERM)
+def main_no_coro(q: mp.Queue, **kwargs):
     run()
+    q.put(None)
+    q.join()
 
 
-def test_exe():
-    """Custom executor"""
-    exe = ThreadPoolExecutor()
-    kill(SIGTERM)
-    run(executor=exe)
+def test_no_coroutine(mpproc):
+    """Signal should still work without a main coroutine"""
+    with mpproc(target=main_no_coro) as (p, q):
+        time.sleep(0.3)
+        os.kill(p.pid, SIGTERM)
+        assert drain_queue(q) == []
 
 
-def test_sig_pause():
-    """Trying to send multiple signals."""
-    items = []
-
+def main_sig_pause(q: mp.Queue):
     async def main():
         try:
+            q.put_nowait("ok")
             await asyncio.sleep(5.0)
         except asyncio.CancelledError:
+            print("in cancellation handler")
             await asyncio.sleep(0.1)
-            items.append(True)
 
-    # The first sigint triggers shutdown mode, so all tasks are cancelled.
-    # Note that main() catches CancelledError, and does a little bit more
-    # work before exiting.
-    kill(SIGINT, after=0.04)
-    # The second sigint should have no effect, because aiorun signal
-    # handler disables itself after the first sigint received, above.
-    kill(SIGINT, after=0.08)
     run(main())
-    assert items  # Verify that main() ran till completion.
+    q.put("done")
+    q.put(None)
+    q.join()
 
 
-def test_sigint():
-    """Basic SIGINT"""
-    kill(SIGINT)
-    run()
-
-
-def test_sigterm_enduring_create_task():
-    """Calling `shutdown_waits_for()` via `create_task()`"""
-
+def drain_queue(q: mp.JoinableQueue) -> List:
+    """Keeps taking items until we get a `None`."""
     items = []
+    item = q.get()
+    q.task_done()
+    while item is not None:
+        items.append(item)
+        item = q.get()
+        q.task_done()
 
+    return items
+
+
+@pytest.mark.parametrize("pre_sig_delay", [0, 0.001, 0.05])
+@pytest.mark.parametrize("post_sig_delay", [0, 0.001, 0.05])
+@pytest.mark.parametrize("signal", [SIGTERM, SIGINT])
+def test_sig_pause_mp(mpproc, signal, pre_sig_delay, post_sig_delay):
+    with mpproc(target=main_sig_pause) as (p, q):
+
+        # async main function is ready
+        ok = q.get()
+        q.task_done()
+        assert ok == "ok"
+
+        # Send the first signal
+        time.sleep(pre_sig_delay)
+        os.kill(p.pid, signal)
+
+        # Wait a bit then send more signals - these should be ignored
+        time.sleep(post_sig_delay)
+        os.kill(p.pid, signal)
+        os.kill(p.pid, signal)
+        os.kill(p.pid, signal)
+
+        # Collect items sent back on the q until we get `None`
+        items = drain_queue(q)
+        assert items == ["done"]
+
+
+def main_sigterm_enduring_create_task(q: mp.Queue, spawn_method):
     async def corofn():
-        await asyncio.sleep(0.04)
-        items.append(True)
+        q.put_nowait("ok")
+        await asyncio.sleep(0.05)
+        q.put_nowait(True)
 
     async def main():
         loop = asyncio.get_event_loop()
-        loop.create_task(shutdown_waits_for(corofn()))
+        if spawn_method == "create_task":
+            loop.create_task(shutdown_waits_for(corofn()))
+        elif spawn_method == "ensure_future":
+            asyncio.ensure_future(shutdown_waits_for(corofn()))
+        elif spawn_method == "await":
+            await shutdown_waits_for(corofn())
+        elif spawn_method == "bare":
+            shutdown_waits_for(corofn())
 
-    kill(SIGTERM, after=0.02)
     run(main())
-    assert items
+    q.put(None)
+    q.join()
 
 
-def test_sigterm_enduring_ensure_future():
-    """Calling `shutdown_waits_for()` via `ensure_future()`"""
-
-    items = []
-
-    async def corofn():
-        await asyncio.sleep(0.02)
-        items.append(True)
-
-    async def main():
-        # Note that we don't need a loop variable anywhere!
-        asyncio.ensure_future(shutdown_waits_for(corofn()))
-
-    kill(SIGTERM, after=0.01)
-    run(main())
-    assert items
-
-
-@pytest.mark.filterwarnings(
-    "ignore:coroutine 'shutdown_waits_for.<locals>.inner' was never awaited"
+@pytest.mark.parametrize(
+    "spawn_method", ["create_task", "ensure_future", "await", "bare"]
 )
-def test_sigterm_enduring_bare():
-    """Call `shutdown_waits_for() without await, or create_task(), or
-    ensure_future(). It's just bare. This actually works (because of
-    the hidden Task inside). However, there will be a RuntimeWarning
-    that the coroutine returned from `shutdown_waits_for() was never
-    awaited. Therefore, maybe best not to use this, just to avoid
-    confusion."""
+@pytest.mark.parametrize("signal", [SIGTERM, SIGINT])
+def test_sigterm_enduring_create_task(mpproc, signal, spawn_method):
+    """Calling `shutdown_waits_for()` via `create_task()`"""
+    with mpproc(
+        target=main_sigterm_enduring_create_task, spawn_method=spawn_method
+    ) as (p, q):
+        # async main function is ready
+        ok = q.get()
+        q.task_done()
+        assert ok == "ok"
 
-    items = []
+        # signal and collect
+        time.sleep(0.01)
+        os.kill(p.pid, signal)
+        items = drain_queue(q)
+        assert items == [True]
 
+
+def main_sigterm_enduring_indirect_cancel(q: mp.Queue):
     async def corofn():
-        await asyncio.sleep(0.02)
-        items.append(True)
-
-    async def main():
-        shutdown_waits_for(corofn())  # <-- Look Ma! No awaits!
-
-    kill(SIGTERM, after=0.01)
-    run(main())
-    assert items
-
-
-def test_sigterm_enduring_await():
-    """Call `shutdown_waits_for() with await."""
-    items = []
-
-    async def corofn(sleep):
-        """This is the cf that must not be cancelled."""
-        await asyncio.sleep(sleep)
-        items.append(True)
-        return True
-
-    async def main():
-        try:
-            # This one is fast enough to finish
-            out = await shutdown_waits_for(corofn(sleep=0.01))
-            assert out is True
-
-            # This one is going to last longer than the shutdown
-            # but we can't get anything back out if that happens.
-            await shutdown_waits_for(corofn(sleep=0.03))
-            # main() gets cancelled here
-            await asyncio.sleep(2)  # pragma: no cover.
-            # This append won't happen
-            items.append(True)  # pragma: no cover.
-        except asyncio.CancelledError:
-            print("main got cancelled")
-            raise
-
-    kill(SIGTERM, after=0.02)
-    run(main())
-
-    assert len(items) == 2
-
-
-def test_sigterm_enduring_indirect_cancel():
-    items = []
-
-    async def corofn(sleep):
-        await asyncio.sleep(sleep)
-        # These next lines can't be hit, because of the cancellation.
-        items.append(True)  # pragma: no cover
-        return True  # pragma: no cover
+        q.put_nowait("ok")
+        await asyncio.sleep(0.2)
+        q.put_nowait(True)
 
     def direct_cancel():
         """Reach inside, find the one task that is marked "do not cancel"
@@ -254,28 +219,43 @@ def test_sigterm_enduring_indirect_cancel():
 
     async def main():
         loop = asyncio.get_event_loop()
-        coro = corofn(sleep=0.2)
+        coro = corofn()
         loop.call_later(0.1, direct_cancel)
-        with pytest.raises(asyncio.CancelledError):
+        try:
             await shutdown_waits_for(coro)
+        except asyncio.CancelledError:
+            q.put_nowait("got cancellation as expected")
+        else:
+            q.put_nowait("no cancellation raised")
 
-    kill(SIGTERM, after=0.3)
     run(main())
+    q.put(None)
+    q.join()
 
-    assert len(items) == 0
+
+def test_sigterm_enduring_indirect_cancel(mpproc):
+    with mpproc(target=main_sigterm_enduring_indirect_cancel) as (p, q):
+        # async main function is ready
+        ok = q.get()
+        q.task_done()
+        assert ok == "ok"  # Means the coro inside shutdown_waits_for is up.
+
+        # signal and collect
+        time.sleep(0.01)
+        os.kill(p.pid, SIGTERM)
+        items = drain_queue(q)
+        assert items == ["got cancellation as expected"]
 
 
-def test_shutdown_callback():
-    graceful = False
+def main_shutdown_callback(q: mp.Queue):
     fut = None
 
     async def _main():
-        nonlocal fut, graceful
-
+        nonlocal fut
+        q.put_nowait("ok")
         fut = asyncio.Future()
         await fut
-
-        graceful = True
+        q.put_nowait(True)
 
     async def main():
         await shutdown_waits_for(_main())
@@ -283,25 +263,65 @@ def test_shutdown_callback():
     def shutdown_callback(loop):
         fut.set_result(None)
 
-    kill(SIGTERM, 0.3)
     run(main(), shutdown_callback=shutdown_callback)
+    q.put(None)
+    q.join()
 
-    assert graceful
+
+def test_shutdown_callback(mpproc):
+    with mpproc(target=main_shutdown_callback) as (p, q):
+
+        # async main function is ready
+        ok = q.get()
+        q.task_done()
+        assert ok == "ok"
+
+        # signal and collect
+        time.sleep(0.3)
+        os.kill(p.pid, SIGTERM)
+        items = drain_queue(q)
+        assert items == [True]
 
 
-def test_shutdown_callback_error():
+def main_shutdown_callback_error(q: mp.Queue):
     async def main():
         await asyncio.sleep(1e-3)
 
     def shutdown_callback(loop):
         raise Exception("blah")
 
-    kill(SIGTERM, 0.3)
-    with pytest.raises(Exception, match="blah"):
+    try:
         run(main(), shutdown_callback=shutdown_callback)
+    except Exception as e:
+        q.put_nowait(e)
+    else:
+        q.put_nowait("exception was not raised")
+    finally:
+        q.put_nowait(None)
+        q.join()
 
 
-def test_shutdown_callback_error_and_main_error(caplog):
+def test_shutdown_callback_error(mpproc):
+    with mpproc(target=main_shutdown_callback_error) as (p, q):
+        time.sleep(0.3)
+        os.kill(p.pid, SIGTERM)
+        items = drain_queue(q)
+        assert isinstance(items[0], Exception)
+        assert str(items[0]) == "blah"
+
+
+def main_shutdown_callback_error_and_main_error(q: mp.Queue):
+
+    import logging
+
+    log_messages = []
+
+    def filt(record):
+        log_messages.append(record.getMessage())
+        return record
+
+    logging.getLogger("aiorun").addFilter(filt)
+
     async def main():
         await asyncio.sleep(1e-3)
         raise Exception("main")
@@ -309,13 +329,31 @@ def test_shutdown_callback_error_and_main_error(caplog):
     def shutdown_callback(loop):
         raise Exception("blah")
 
-    kill(SIGTERM, 0.3)
-    with pytest.raises(Exception, match="main"):
+    try:
         run(main(), stop_on_unhandled_errors=True, shutdown_callback=shutdown_callback)
+    except Exception as e:
+        q.put_nowait(e)
+    else:
+        q.put_nowait("exception was not raised")
+    finally:
+        q.put_nowait(log_messages)
+        q.put_nowait(None)
+        q.join()
 
-    assert any(
-        "shutdown_callback() raised an error" in r.message for r in caplog.records
-    )
+
+def test_shutdown_callback_error_and_main_error(mpproc):
+    with mpproc(
+        target=main_shutdown_callback_error_and_main_error, expected_exit_code=1
+    ) as (p, q):
+        time.sleep(0.3)
+        os.kill(p.pid, SIGTERM)
+        items = drain_queue(q)
+        assert isinstance(items[0], Exception)
+        assert str(items[0]) == "main"
+
+        records = items[1]
+        print(records)
+        assert any("shutdown_callback() raised an error" in r for r in records)
 
 
 def test_mutex_loop_and_use_uvloop():

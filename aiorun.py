@@ -231,8 +231,8 @@ def run(
         signal.signal(signal.SIGBREAK, windows_handler)
         signal.signal(signal.SIGINT, windows_handler)
     else:
-        loop.add_signal_handler(SIGINT, shutdown_handler, loop)
-        loop.add_signal_handler(SIGTERM, shutdown_handler, loop)
+        signal.signal(signal.SIGTERM, lambda sig, frame: shutdown_handler(loop))
+        signal.signal(signal.SIGINT, lambda sig, frame: shutdown_handler(loop))
 
     # TODO: We probably don't want to create a different executor if the
     # TODO: loop was supplied. (User might have put stuff on that loop's
@@ -330,8 +330,8 @@ def _shutdown_handler(loop):
         signal.signal(signal.SIGBREAK, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
     else:
-        loop.remove_signal_handler(SIGTERM)
-        loop.add_signal_handler(SIGINT, lambda: None)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
     logger.critical("Stopping the loop")
     loop.call_soon_threadsafe(loop.stop)
