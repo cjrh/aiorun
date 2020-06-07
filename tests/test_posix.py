@@ -100,18 +100,22 @@ def test_sigterm_mp(mpproc, signal, use_uvloop, use_exe, user_supplied_loop):
         assert not items
 
 
-def main_no_coro(q: mp.Queue):
+def main_no_coro(q: mp.JoinableQueue):
+    q.put("ready")
     run()
     q.put(None)
-    q.join()
+    join_queue_timeout(q)
 
 
-def test_no_coroutine(mpproc):
+@pytest.mark.parametrize("delay", [0.0, 0.001, 0.1])
+def test_no_coroutine(mpproc, delay):
     """Signal should still work without a main coroutine"""
     with mpproc(target=main_no_coro) as (p, q):
-        # TODO: with multiprocessing set_start_method=spawn, lowering this
-        #  detail causes hanging. Still unclear why.
-        time.sleep(0.8)
+        assert take_queue(q, 1) == ["ready"]
+        # The first two delays will cause signals to be sent before the
+        # signal handler is properly set up inside run(). These signals will
+        # still be collected and replayed.
+        time.sleep(delay)
         os.kill(p.pid, SIGTERM)
         assert drain_queue(q) == []
 
@@ -131,14 +135,33 @@ def main_sig_pause(q: mp.Queue):
     q.join()
 
 
-def drain_queue(q: mp.JoinableQueue) -> List:
+def join_queue_timeout(q: mp.JoinableQueue, timeout=10.0):
+    wait = timeout
+    while wait > 0:
+        time.sleep(1)
+        wait -= 1
+        if q.empty():
+            break
+    else:
+        raise mp.TimeoutError
+
+
+def take_queue(q: mp.JoinableQueue, n: int = 1) -> List:
+    items = []
+    for i in range(n):
+        items.append(q.get(timeout=10.0))
+        q.task_done()
+    return items
+
+
+def drain_queue(q: mp.JoinableQueue, timeout=10) -> List:
     """Keeps taking items until we get a `None`."""
     items = []
-    item = q.get()
+    item = q.get(timeout=timeout)
     q.task_done()
     while item is not None:
         items.append(item)
-        item = q.get()
+        item = q.get(timeout=timeout)
         q.task_done()
 
     return items

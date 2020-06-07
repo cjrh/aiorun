@@ -158,8 +158,8 @@ def run(
     # Signal events that occur before we've had time to set up. Such events
     # will accumulate in this list.
     early_events = []
-    func = partial(_shutdown_handler_queued, events=[])
-    _set_signal_handlers(_shutdown_handler_queued)
+    func = partial(_shutdown_handler_queued, events=early_events)
+    _set_signal_handlers(func)
 
     logger.debug("Entering run()")
     # Disable default signal handling ASAP
@@ -343,7 +343,7 @@ def _signal_wrapper(sig, frame, loop: asyncio.AbstractEventLoop, actual_handler)
     loop.call_soon_threadsafe(actual_handler, loop)
 
 
-def _shutdown_handler_queued(sig, frame, events: List):
+def _shutdown_handler_queued(sig, frame, *, events: List):
     events.append((sig, frame))
 
 
