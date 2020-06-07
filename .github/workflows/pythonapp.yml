@@ -39,7 +39,7 @@ jobs:
     - name: Test with pytest
       run: |
         pip install pytest
-        flit install
+        flit install --pth-file
         pytest --verbose --fulltrace --cov aiorun tests/
 
     - name: Extract branch name
