@@ -155,14 +155,9 @@ def run(
         this flag is set, any unhandled exceptions will stop the loop, and
         be re-raised after the normal shutdown sequence is completed.
     """
+    _clear_signal_handlers()
     logger.debug("Entering run()")
     # Disable default signal handling ASAP
-    if WINDOWS:
-        signal.signal(signal.SIGBREAK, signal.SIG_IGN)
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-    else:
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     if loop and use_uvloop:
         raise Exception(
@@ -353,6 +348,13 @@ def _shutdown_handler(loop):
     loop = loop or get_event_loop()
 
     # Disable the handlers so they won't be called again.
+    _clear_signal_handlers()
+
+    logger.critical("Stopping the loop")
+    loop.stop()
+
+
+def _clear_signal_handlers():
     if WINDOWS:  # pragma: no cover
         # These calls to signal.signal can only be called from the main
         # thread.
@@ -361,6 +363,3 @@ def _shutdown_handler(loop):
     else:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
-
-    logger.critical("Stopping the loop")
-    loop.stop()
