@@ -5,7 +5,7 @@ import logging
 import asyncio
 from asyncio import get_event_loop, AbstractEventLoop, Task, gather, CancelledError
 from concurrent.futures import Executor, ThreadPoolExecutor
-from typing import Optional, Callable
+from typing import Optional, Callable, List
 
 try:  # pragma: no cover
     # Coroutine only arrived in Python 3.5.3, and Ubuntu 16.04 is unfortunately
@@ -155,7 +155,12 @@ def run(
         this flag is set, any unhandled exceptions will stop the loop, and
         be re-raised after the normal shutdown sequence is completed.
     """
-    _clear_signal_handlers()
+    # Signal events that occur before we've had time to set up. Such events
+    # will accumulate in this list.
+    early_events = []
+    func = partial(_shutdown_handler_queued, events=[])
+    _set_signal_handlers(_shutdown_handler_queued)
+
     logger.debug("Entering run()")
     # Disable default signal handling ASAP
 
@@ -231,6 +236,11 @@ def run(
     # cannot seem get it to work robustly.
     sighandler = partial(_signal_wrapper, loop=loop, actual_handler=shutdown_handler)
     _set_signal_handlers(sighandler)
+    # Now that we have a proper signal handler set up, replay any early
+    # events received into the configured handler.
+    for sig, frame in early_events:
+        logger.warning("Replaying early event: %s", sig)
+        _signal_wrapper(sig, frame, loop=loop, actual_handler=shutdown_handler)
 
     if WINDOWS:  # pragma: no cover
         # This is to allow CTRL-C to be detected in a timely fashion,
@@ -331,6 +341,10 @@ def _signal_wrapper(sig, frame, loop: asyncio.AbstractEventLoop, actual_handler)
     # Disable the handlers so they won't be called again.
     _clear_signal_handlers()
     loop.call_soon_threadsafe(actual_handler, loop)
+
+
+def _shutdown_handler_queued(sig, frame, events: List):
+    events.append((sig, frame))
 
 
 def _shutdown_handler(loop):
