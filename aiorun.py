@@ -1,11 +1,10 @@
 """Boilerplate for asyncio applications"""
+import signal
 import sys
 import logging
 import asyncio
 from asyncio import get_event_loop, AbstractEventLoop, Task, gather, CancelledError
 from concurrent.futures import Executor, ThreadPoolExecutor
-import signal
-from signal import SIGTERM, SIGINT
 from typing import Optional, Callable
 
 try:  # pragma: no cover
@@ -157,6 +156,9 @@ def run(
         be re-raised after the normal shutdown sequence is completed.
     """
     logger.debug("Entering run()")
+    # Disable default signal handling ASAP
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
     if loop and use_uvloop:
         raise Exception(
@@ -231,8 +233,25 @@ def run(
         signal.signal(signal.SIGBREAK, windows_handler)
         signal.signal(signal.SIGINT, windows_handler)
     else:
-        signal.signal(signal.SIGTERM, lambda sig, frame: shutdown_handler(loop))
-        signal.signal(signal.SIGINT, lambda sig, frame: shutdown_handler(loop))
+        # Setting up signal handlers. The callback configured by the
+        # underlying system (non-asyncio) API ``signal.signal`` is
+        # pre-emptive, which means you can't safely do loop manipulation
+        # with it; yet, aiorun provides an API that allows you to specify
+        # a ``shutdown_handler`` that takes a loop parameter. This will be
+        # used to manipulate the loop. How to bridge these two worlds?
+        # Here we use a private, internal wrapper function that can be
+        # called from ``signal.signal`` (i.e. pre-emptive interruption)
+        # but which will call our actual, non-pre-emptive shutdown handler
+        # in a safe way.
+        #
+        # This is supposed to be what loop.add_signal_handler does, but I
+        # cannot seem get it to work robustly.
+        sighandler = partial(
+            _signal_wrapper, loop=loop, actual_handler=shutdown_handler
+        )
+
+        signal.signal(signal.SIGTERM, sighandler)
+        signal.signal(signal.SIGINT, sighandler)
 
     # TODO: We probably don't want to create a different executor if the
     # TODO: loop was supplied. (User might have put stuff on that loop's
@@ -319,6 +338,12 @@ async def windows_support_wakeup():  # pragma: no cover
         await asyncio.sleep(0.1)
 
 
+def _signal_wrapper(sig, frame, loop: asyncio.AbstractEventLoop, actual_handler):
+    """This internal does nothing other than call the actual signal handler
+    function in a way that is safe for asyncio."""
+    loop.call_soon_threadsafe(actual_handler, loop)
+
+
 def _shutdown_handler(loop):
     logger.debug("Entering shutdown handler")
     loop = loop or get_event_loop()
@@ -334,4 +359,4 @@ def _shutdown_handler(loop):
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
     logger.critical("Stopping the loop")
-    loop.call_soon_threadsafe(loop.stop)
+    loop.stop()
