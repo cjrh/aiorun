@@ -364,12 +364,23 @@ def _set_signal_handlers(threadsafe_func):
         signal.signal(signal.SIGINT, threadsafe_func)
 
 
+def _signal_ignore(sig, frame):
+    # Python 3.6 still suffers from "TypeError: int is not callable" if
+    # SIG_IGN is used. When we drop 3.6 out of the matrix, this can change
+    # but until then it looks like a do-nothing handler is our best bet.
+    #
+    # See:
+    # - https://bugs.python.org/issue39169
+    # - https://bugs.python.org/issue23395
+    pass
+
+
 def _clear_signal_handlers():
     if WINDOWS:  # pragma: no cover
         # These calls to signal.signal can only be called from the main
         # thread.
-        signal.signal(signal.SIGBREAK, signal.SIG_IGN)
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGBREAK, _signal_ignore)
+        signal.signal(signal.SIGINT, _signal_ignore)
     else:
-        signal.signal(signal.SIGINT, signal.SIG_IGN)
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, _signal_ignore)
+        signal.signal(signal.SIGTERM, _signal_ignore)
