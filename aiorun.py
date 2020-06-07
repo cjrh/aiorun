@@ -1,11 +1,10 @@
 """Boilerplate for asyncio applications"""
+import signal
 import sys
 import logging
 import asyncio
 from asyncio import get_event_loop, AbstractEventLoop, Task, gather, CancelledError
 from concurrent.futures import Executor, ThreadPoolExecutor
-import signal
-from signal import SIGTERM, SIGINT
 from typing import Optional, Callable
 
 try:  # pragma: no cover
@@ -156,7 +155,9 @@ def run(
         this flag is set, any unhandled exceptions will stop the loop, and
         be re-raised after the normal shutdown sequence is completed.
     """
+    _clear_signal_handlers()
     logger.debug("Entering run()")
+    # Disable default signal handling ASAP
 
     if loop and use_uvloop:
         raise Exception(
@@ -215,24 +216,26 @@ def run(
         loop.create_task(new_coro())
 
     shutdown_handler = shutdown_handler or _shutdown_handler
+    # Setting up signal handlers. The callback configured by the
+    # underlying system (non-asyncio) API ``signal.signal`` is
+    # pre-emptive, which means you can't safely do loop manipulation
+    # with it; yet, aiorun provides an API that allows you to specify
+    # a ``shutdown_handler`` that takes a loop parameter. This will be
+    # used to manipulate the loop. How to bridge these two worlds?
+    # Here we use a private, internal wrapper function that can be
+    # called from ``signal.signal`` (i.e. pre-emptive interruption)
+    # but which will call our actual, non-pre-emptive shutdown handler
+    # in a safe way.
+    #
+    # This is supposed to be what loop.add_signal_handler does, but I
+    # cannot seem get it to work robustly.
+    sighandler = partial(_signal_wrapper, loop=loop, actual_handler=shutdown_handler)
+    _set_signal_handlers(sighandler)
 
     if WINDOWS:  # pragma: no cover
         # This is to allow CTRL-C to be detected in a timely fashion,
         # see: https://bugs.python.org/issue23057#msg246316
         loop.create_task(windows_support_wakeup())
-
-        # This is to be able to handle SIGBREAK.
-        def windows_handler(sig, frame):
-            # Disable the handler so it won't be called again.
-            signame = signal.Signals(sig).name
-            logger.critical("Received signal: %s. Stopping the loop.", signame)
-            shutdown_handler(loop)
-
-        signal.signal(signal.SIGBREAK, windows_handler)
-        signal.signal(signal.SIGINT, windows_handler)
-    else:
-        signal.signal(signal.SIGTERM, lambda sig, frame: shutdown_handler(loop))
-        signal.signal(signal.SIGINT, lambda sig, frame: shutdown_handler(loop))
 
     # TODO: We probably don't want to create a different executor if the
     # TODO: loop was supplied. (User might have put stuff on that loop's
@@ -319,11 +322,35 @@ async def windows_support_wakeup():  # pragma: no cover
         await asyncio.sleep(0.1)
 
 
+def _signal_wrapper(sig, frame, loop: asyncio.AbstractEventLoop, actual_handler):
+    """This private function does nothing other than call the actual signal
+    handler function in a way that is safe for asyncio. This function is
+    called as the raw signal handler which means it is called pre-emptively,
+    that's why we used ``call_soon_threadsafe`` below. The actual signal
+    handler can interact with the loop in a safe way."""
+    # Disable the handlers so they won't be called again.
+    _clear_signal_handlers()
+    loop.call_soon_threadsafe(actual_handler, loop)
+
+
 def _shutdown_handler(loop):
     logger.debug("Entering shutdown handler")
     loop = loop or get_event_loop()
 
-    # Disable the handlers so they won't be called again.
+    logger.critical("Stopping the loop")
+    loop.stop()
+
+
+def _set_signal_handlers(threadsafe_func):
+    if WINDOWS:  # pragma: no cover
+        signal.signal(signal.SIGBREAK, threadsafe_func)
+        signal.signal(signal.SIGINT, threadsafe_func)
+    else:
+        signal.signal(signal.SIGTERM, threadsafe_func)
+        signal.signal(signal.SIGINT, threadsafe_func)
+
+
+def _clear_signal_handlers():
     if WINDOWS:  # pragma: no cover
         # These calls to signal.signal can only be called from the main
         # thread.
@@ -332,6 +359,3 @@ def _shutdown_handler(loop):
     else:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
-
-    logger.critical("Stopping the loop")
-    loop.call_soon_threadsafe(loop.stop)

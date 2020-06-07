@@ -39,8 +39,8 @@ jobs:
     - name: Test with pytest
       run: |
         pip install pytest
-        flit install
-        pytest --verbose --fulltrace --cov aiorun tests/
+        flit install --pth-file
+        pytest --cov aiorun tests/
 
     - name: Extract branch name
       shell: bash
@@ -49,11 +49,7 @@ jobs:
     - name: Upload coverage
       env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-          # This will only work if we also send a "done" event after the
-          # whole job is finished.
-          # See: https://docs.coveralls.io/parallel-build-webhook
-          #COVERALLS_PARALLEL: "true"
-          CI_BRANCH: ${{ steps.extract_branch.outputs.branch }}
+          COVERALLS_PARALLEL: "true"
       if: matrix.os == 'ubuntu-latest'
       run: |
         coveralls
