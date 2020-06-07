@@ -231,8 +231,8 @@ def run(
         signal.signal(signal.SIGBREAK, windows_handler)
         signal.signal(signal.SIGINT, windows_handler)
     else:
-        loop.add_signal_handler(SIGINT, shutdown_handler, loop)
-        loop.add_signal_handler(SIGTERM, shutdown_handler, loop)
+        signal.signal(signal.SIGTERM, lambda sig, frame: shutdown_handler(loop))
+        signal.signal(signal.SIGINT, lambda sig, frame: shutdown_handler(loop))
 
     # TODO: We probably don't want to create a different executor if the
     # TODO: loop was supplied. (User might have put stuff on that loop's
@@ -258,7 +258,14 @@ def run(
         try:
             shutdown_callback(loop)
         except BaseException as exc:
-            logger.critical("%r failed hard.", shutdown_callback, exc_info=exc)
+            if pending_exception_to_raise:
+                logger.exception(
+                    "The shutdown_callback() raised an error, but there is "
+                    "already a different exception raised from the loop, so "
+                    "this log message is all you're going to see about it."
+                )
+            else:
+                pending_exception_to_raise = exc
 
     def sep():
         tasks = all_tasks(loop=loop)
@@ -323,8 +330,8 @@ def _shutdown_handler(loop):
         signal.signal(signal.SIGBREAK, signal.SIG_IGN)
         signal.signal(signal.SIGINT, signal.SIG_IGN)
     else:
-        loop.remove_signal_handler(SIGTERM)
-        loop.add_signal_handler(SIGINT, lambda: None)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
 
     logger.critical("Stopping the loop")
     loop.call_soon_threadsafe(loop.stop)
