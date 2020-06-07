@@ -95,7 +95,7 @@ def test_sigterm_mp(mpproc, signal, use_uvloop, use_exe, user_supplied_loop):
         ok = q.get()
         q.task_done()
         assert ok == "ok"
-        os.kill(p.pid, SIGTERM)
+        os.kill(p.pid, signal)
         items = drain_queue(q)
         assert not items
 
