@@ -157,8 +157,12 @@ def run(
     """
     logger.debug("Entering run()")
     # Disable default signal handling ASAP
-    signal.signal(signal.SIGBREAK, lambda sig, frame: None)
-    signal.signal(signal.SIGINT, lambda sig, frame: None)
+    if WINDOWS:
+        signal.signal(signal.SIGBREAK, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+    else:
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     if loop and use_uvloop:
         raise Exception(
@@ -352,8 +356,8 @@ def _shutdown_handler(loop):
     if WINDOWS:  # pragma: no cover
         # These calls to signal.signal can only be called from the main
         # thread.
-        signal.signal(signal.SIGBREAK, lambda sig, frame: None)
-        signal.signal(signal.SIGINT, lambda sig, frame: None)
+        signal.signal(signal.SIGBREAK, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
     else:
         signal.signal(signal.SIGINT, signal.SIG_IGN)
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
