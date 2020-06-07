@@ -111,7 +111,7 @@ def test_no_coroutine(mpproc):
     with mpproc(target=main_no_coro) as (p, q):
         # TODO: with multiprocessing set_start_method=spawn, lowering this
         #  detail causes hanging. Still unclear why.
-        time.sleep(0.5)
+        time.sleep(0.8)
         os.kill(p.pid, SIGTERM)
         assert drain_queue(q) == []
 
@@ -318,7 +318,7 @@ def test_shutdown_callback_error(mpproc):
     with mpproc(target=main_shutdown_callback_error) as (p, q):
         # TODO: with multiprocessing set_start_method=spawn, lowering this
         #  detail causes hanging. Still unclear why.
-        time.sleep(0.5)
+        time.sleep(0.8)
         os.kill(p.pid, SIGTERM)
         items = drain_queue(q)
         assert isinstance(items[0], Exception)
@@ -362,7 +362,7 @@ def test_shutdown_callback_error_and_main_error(mpproc):
     ) as (p, q):
         # TODO: with multiprocessing set_start_method=spawn, lowering this
         #  detail causes hanging. Still unclear why.
-        time.sleep(0.5)
+        time.sleep(0.8)
         os.kill(p.pid, SIGTERM)
         items = drain_queue(q)
         assert isinstance(items[0], Exception)
