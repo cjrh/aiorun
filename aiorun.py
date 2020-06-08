@@ -174,8 +174,15 @@ def run(
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
         else:
             asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
-
-        loop = asyncio.new_event_loop()
+        
+        if WINDOWS:  # pragma: no cover
+            # In python 3.8+ ProactorEventLoop is the default event loop on
+            # windows. It is explicitly set here so this event loop is used on python
+            # versions below 3.8.
+            loop = asyncio.ProactorEventLoop()
+        else:
+            loop = asyncio.new_event_loop()
+        
         asyncio.set_event_loop(loop)
 
     if loop and loop.get_exception_handler() and stop_on_unhandled_errors:
