@@ -191,7 +191,11 @@ def run(
         """See: https://docs.python.org/3/library/asyncio-eventloop.html#error-handling-api"""
         nonlocal pending_exception_to_raise
         pending_exception_to_raise = context.get("exception")
-        logger.error("Unhandled exception; stopping loop.")
+        logger.error(
+            "Unhandled exception; stopping loop: %r",
+            context.get("message"),
+            exc_info=pending_exception_to_raise
+        )
         loop.stop()
 
     if stop_on_unhandled_errors:
