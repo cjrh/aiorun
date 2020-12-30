@@ -5,8 +5,10 @@ import time
 from signal import SIGINT, SIGTERM
 from concurrent.futures import ThreadPoolExecutor
 from typing import List
+from enum import Enum, auto
 
-from aiorun import run, shutdown_waits_for, _DO_NOT_CANCEL_COROS
+
+from aiorun import run, shutdown_waits_for, _DO_NOT_CANCEL_COROS, ShutdownCallback
 import pytest
 import multiprocessing as mp
 from contextlib import contextmanager
@@ -260,29 +262,70 @@ def test_sigterm_enduring_indirect_cancel(mpproc):
         assert items == ["got cancellation as expected"]
 
 
-def main_shutdown_callback(q: mp.Queue):
-    fut = None
+class CallbackType(Enum):
+    FUNCTION = auto()
+    ASYNC_DEF_FUNCTION = auto()
+    COROUTINE_OBJECT = auto()
 
-    async def _main():
-        nonlocal fut
+
+def make_shutdown_callback(cbtype: CallbackType, fut: asyncio.Future) -> ShutdownCallback:
+    if cbtype is CallbackType.FUNCTION:
+        def shutdown_callback(loop):
+            print('shutdown callback called!')
+            fut.set_result(None)
+
+        return shutdown_callback
+
+    elif cbtype is CallbackType.ASYNC_DEF_FUNCTION:
+        async def shutdown_callback(loop):
+            fut.set_result(None)
+
+        return shutdown_callback
+
+    elif cbtype is CallbackType.COROUTINE_OBJECT:
+        async def shutdown_callback(loop):
+            fut.set_result(None)
+
+        return shutdown_callback(None)
+
+    else:
+        raise TypeError('Unexpected callback type.')
+
+
+def main_shutdown_callback(q: mp.Queue, *, cbtype: "ShutdownCallback"):
+    async def main():
+        # Inform the test caller that the main coro is ready
         q.put_nowait("ok")
-        fut = asyncio.Future()
-        await fut
+        await asyncio.sleep(10.0)
+        # Inform the test caller that the fut was unblocked successfully.
         q.put_nowait(True)
 
-    async def main():
-        await shutdown_waits_for(_main())
+    if cbtype is CallbackType.FUNCTION:
+        def shutdown_callback(loop):
+            q.put_nowait(True)
+    elif cbtype is CallbackType.ASYNC_DEF_FUNCTION:
+        async def shutdown_callback(loop):
+            q.put_nowait(True)
+    elif cbtype is CallbackType.COROUTINE_OBJECT:
+        async def shutdown_callback_fn(loop):
+            q.put_nowait(True)
 
-    def shutdown_callback(loop):
-        fut.set_result(None)
+        shutdown_callback = shutdown_callback_fn(None)
+    else:
+        raise TypeError('Unexpected cbtype')
 
     run(main(), shutdown_callback=shutdown_callback)
     q.put(None)
     q.join()
 
 
-def test_shutdown_callback(mpproc):
-    with mpproc(target=main_shutdown_callback) as (p, q):
+@pytest.mark.parametrize('cbtype', [
+    CallbackType.FUNCTION,
+    CallbackType.ASYNC_DEF_FUNCTION,
+    CallbackType.COROUTINE_OBJECT,
+])
+def test_shutdown_callback(mpproc, cbtype):
+    with mpproc(target=main_shutdown_callback, cbtype=cbtype) as (p, q):
 
         # async main function is ready
         ok = q.get()
