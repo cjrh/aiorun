@@ -2,17 +2,30 @@
 import signal
 import sys
 import logging
+import inspect
 import asyncio
 from asyncio import get_event_loop, AbstractEventLoop, Task, gather, CancelledError
 from concurrent.futures import Executor, ThreadPoolExecutor
-from typing import Optional, Callable
+from typing import Optional, Callable, Union, Any
 
 try:  # pragma: no cover
     # Coroutine only arrived in Python 3.5.3, and Ubuntu 16.04 is unfortunately
     # stuck on 3.5.2 for the time being. Revisit this in a year.
-    from typing import Coroutine
+    from typing import Coroutine, Awaitable
+
+    ShutdownCallback = Optional[
+        Union[
+            Awaitable,
+            Callable[[AbstractEventLoop], Awaitable],
+            Callable[[AbstractEventLoop], None],
+        ]
+    ]
+
 except ImportError:  # pragma: no cover
-    pass
+    Coroutine = Any
+    Awaitable = Any
+    ShutdownCallback = Any
+
 from weakref import WeakSet
 from functools import partial
 
@@ -116,7 +129,7 @@ def run(
     *,
     loop: Optional[AbstractEventLoop] = None,
     shutdown_handler: Optional[Callable[[AbstractEventLoop], None]] = None,
-    shutdown_callback: Optional[Callable[[AbstractEventLoop], None]] = None,
+    shutdown_callback: "ShutdownCallback" = None,
     executor_workers: int = 10,
     executor: Optional[Executor] = None,
     use_uvloop: bool = False,
@@ -263,7 +276,18 @@ def run(
     if shutdown_callback is not None:
         logger.info("Executing provided shutdown_callback.")
         try:
-            shutdown_callback(loop)
+            if inspect.iscoroutine(shutdown_callback):
+                loop.run_until_complete(shutdown_callback)
+            elif inspect.iscoroutinefunction(shutdown_callback):
+                loop.run_until_complete(shutdown_callback(loop))
+            elif callable(shutdown_callback):
+                shutdown_callback(loop)
+            else:
+                raise TypeError(
+                    "The provided shutdown_callback must be either a function,"
+                    "an awaitable, or a coroutine object, but it was "
+                    + str(type(shutdown_callback))
+                )
         except BaseException as exc:
             if pending_exception_to_raise:
                 logger.exception(
