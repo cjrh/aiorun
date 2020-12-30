@@ -5,7 +5,7 @@ import time
 from signal import SIGINT, SIGTERM
 from concurrent.futures import ThreadPoolExecutor
 from typing import List
-from enum import Enum, auto
+from enum import Enum
 
 
 from aiorun import run, shutdown_waits_for, _DO_NOT_CANCEL_COROS, ShutdownCallback
@@ -263,9 +263,9 @@ def test_sigterm_enduring_indirect_cancel(mpproc):
 
 
 class CallbackType(Enum):
-    FUNCTION = auto()
-    ASYNC_DEF_FUNCTION = auto()
-    COROUTINE_OBJECT = auto()
+    FUNCTION = 1
+    ASYNC_DEF_FUNCTION = 2
+    COROUTINE_OBJECT = 3
 
 
 def make_shutdown_callback(cbtype: CallbackType, fut: asyncio.Future) -> ShutdownCallback:
