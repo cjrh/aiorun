@@ -130,7 +130,7 @@ def run(
     loop: Optional[AbstractEventLoop] = None,
     shutdown_handler: Optional[Callable[[AbstractEventLoop], None]] = None,
     shutdown_callback: "ShutdownCallback" = None,
-    executor_workers: int = 10,
+    executor_workers: Optional[int] = None,
     executor: Optional[Executor] = None,
     use_uvloop: bool = False,
     stop_on_unhandled_errors: bool = False
@@ -154,10 +154,12 @@ def run(
         cancelling any tasks.
         Useful for graceful shutdown.
     :param executor_workers: The number of workers in the executor.
-        (NOTE: ``run()`` creates a new executor instance internally,
-        regardless of whether you supply your own loop.)
+        NOTE: ``run()`` creates a new executor instance internally,
+        regardless of whether you supply your own loop. Note that this
+        parameter will be ignored if you provide an executor parameter.
     :param executor: You can decide to use your own executor instance
-        if you like.
+        if you like. If you provide an executor instance, the
+        executor_workers parameter will be ignored.
     :param use_uvloop: The loop policy will be set to use uvloop. It
         is your responsibility to install uvloop. If missing, an
         ``ImportError`` will be raised.

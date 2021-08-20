@@ -3,3 +3,7 @@
           reverting the change.  Now, if caller supplies a loop, it is up
           to caller to close, but if no loop is supplied, we will close
           the default loop on exit.
+
+2021.8.20 From feedback in https://github.com/cjrh/aiorun/issues/65, decided
+          to change the max_workers parameter to None to allow the default
+          in ThreadPoolExecutor to be used, rather than a constant of 10.
