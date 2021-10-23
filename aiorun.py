@@ -324,7 +324,12 @@ def run(
     # loop.run_until_complete() line: meaning, not all the tasks in
     # the gathered group will actually be complete. You need to
     # enable this with the ``return_exceptions`` flag.
-    group = gather(*tasks, *do_not_cancel, loop=loop, return_exceptions=True)
+    kwargs = dict(
+        return_exceptions=True
+    )
+    if sys.version_info < (3, 10):
+        kwargs['loop'] = loop
+    group = gather(*tasks, *do_not_cancel, **kwargs)
     logger.info("Running pending tasks till complete")
     # TODO: obtain all the results, and log any results that are exceptions
     # other than CancelledError. Will be useful for troubleshooting.
