@@ -318,22 +318,15 @@ def run(
         return tasks, do_not_cancel
 
     tasks, do_not_cancel = sep()
-    # Here's a protip: if you group a bunch of tasks, and some of them
-    # get cancelled, and they DON'T HANDLE THE CANCELLATION, then the
-    # raised CancelledError will bubble up to, and stop the
-    # loop.run_until_complete() line: meaning, not all the tasks in
-    # the gathered group will actually be complete. You need to
-    # enable this with the ``return_exceptions`` flag.
-    kwargs = dict(
-        return_exceptions=True
-    )
-    if sys.version_info < (3, 10):
-        kwargs['loop'] = loop
-    group = gather(*tasks, *do_not_cancel, **kwargs)
-    logger.info("Running pending tasks till complete")
-    # TODO: obtain all the results, and log any results that are exceptions
-    # other than CancelledError. Will be useful for troubleshooting.
-    loop.run_until_complete(group)
+     
+    async def wait_for_cancelled_tasks():
+        return await gather(*tasks, *do_not_cancel, return_exceptions=True)
+
+    if tasks or do_not_cancel:
+        logger.info("Running pending tasks till complete")
+        # TODO: obtain all the results, and log any results that are exceptions
+        # other than CancelledError. Will be useful for troubleshooting.
+        loop.run_until_complete(wait_for_cancelled_tasks())
 
     logger.info("Waiting for executor shutdown.")
     executor.shutdown(wait=True)
