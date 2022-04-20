@@ -8,4 +8,6 @@
          to change the max_workers parameter to None to allow the default
          in ThreadPoolExecutor to be used, rather than a constant of 10.
 
-2022.4.1 @Pirulax pushed for removing `loop` from the `gather` call
+2022.4.1 @Pirulax pushed for removing `loop` from the `gather` call based
+         on the deprecation warning, so there's a small refactor in
+         https://github.com/cjrh/aiorun/pull/69
