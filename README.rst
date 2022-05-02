@@ -404,20 +404,41 @@ Here's an example:
     from aiorun import run, shutdown_waits_for
 
     async def corofn():
-        await asyncio.sleep(60)
+        for i in range(10):
+            print(i)
+            await asyncio.sleep(1)
         print('done!')
 
     async def main():
         try:
             await shutdown_waits_for(corofn())
-        except asyncio.CancelledError
+        except asyncio.CancelledError:
             print('oh noes!')
 
     run(main())
 
-If you hit ``CTRL-C`` *before* 60 seconds has passed, you will see
-``oh noes!`` printed immediately, and then after 60 seconds (since start),
+If you hit ``CTRL-C`` *before* 10 seconds has passed, you will see
+``oh noes!`` printed immediately, and then after 10 seconds (since start),
 ``done!`` is printed, and thereafter the program exits.
+
+Output:
+
+.. code-block:: shell
+
+    $ python testshield.py
+    0
+    1
+    2
+    3
+    4
+    ^CStopping the loop
+    oh noes!
+    5
+    6
+    7
+    8
+    9
+    done!
 
 Behind the scenes, ``all_tasks()`` would have been cancelled by ``CTRL-C``,
 *except* ones wrapped in ``shutdown_waits_for()`` calls.  In this respect, it
