@@ -365,7 +365,7 @@ def _shutdown_handler(loop):
     logger.debug("Entering shutdown handler")
     loop = loop or get_event_loop()
 
-    logger.critical("Stopping the loop")
+    logger.warning("Stopping the loop")
     loop.stop()
 
 
