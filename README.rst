@@ -64,6 +64,22 @@ call ``loop.stop()`` inside it: that will initiate shutdown.
     a traceback. If you want this behaviour, please see the section on
     *error handling* further down.
 
+.. warning::
+
+    Note that `aiorun.run(coro)` will create a **new event loop instance**
+    every time it is invoked (same as `asyncio.run`). This might cause
+    confusing errors if your code interacts with the default event loop
+    instance provided by the stdlib `asyncio` library. For such situations
+    you can provide the actual loop you're using with
+    `aiorun.run(coro, loop=loop)`. There is more info about this further down.
+
+    However, generally speaking, configuring your own loop and providing
+    it in this way is a code smell. You will find it much easier to
+    reason about your code if you do all your task creation *inside*
+    an async context, such as within an `async def` function, because then
+    there will no ambiguity about which event loop is in play: it will
+    always be the one returned by `asyncio.get_running_loop()`.
+
 
 🤔 Why?
 ----------------
