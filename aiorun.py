@@ -142,9 +142,8 @@ def run(
         run if missing. The loop will continue to run after the supplied
         coroutine finishes. The supplied coroutine is typically
         a "main" coroutine from which all other work is spawned.
-    :param loop: Optionally supply your own loop. If missing, the
-        default loop attached to the current thread context will
-        be used, i.e., whatever ``asyncio.get_event_loop()`` returns.
+    :param loop: Optionally supply your own loop. If missing, a new
+        event loop instance will be created.
     :param shutdown_handler: By default, SIGINT and SIGTERM will be
         handled and will stop the loop, thereby invoking the shutdown
         sequence. Alternatively you can supply your own shutdown
@@ -273,8 +272,8 @@ def run(
             # asyncio. So we fall back to KeyboardInterrupt (triggered
             # by the user/environment sending CTRL-C, or signal.CTRL_C_EVENT
             shutdown_handler(loop)
-    logger.info("Entering shutdown phase.")
 
+    logger.info("Entering shutdown phase.")
     if shutdown_callback is not None:
         logger.info("Executing provided shutdown_callback.")
         try:
@@ -318,7 +317,7 @@ def run(
         return tasks, do_not_cancel
 
     tasks, do_not_cancel = sep()
-     
+
     async def wait_for_cancelled_tasks():
         return await gather(*tasks, *do_not_cancel, return_exceptions=True)
 
