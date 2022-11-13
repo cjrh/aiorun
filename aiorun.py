@@ -134,7 +134,7 @@ def run(
     executor: Optional[Executor] = None,
     use_uvloop: bool = False,
     stop_on_unhandled_errors: bool = False,
-    timeout_task_shutdown: float = 60,
+    timeout_task_shutdown: float = 60
 ) -> None:
     """
     Start up the event loop, and wait for a signal to shut down.
