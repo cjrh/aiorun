@@ -133,7 +133,8 @@ def run(
     executor_workers: Optional[int] = None,
     executor: Optional[Executor] = None,
     use_uvloop: bool = False,
-    stop_on_unhandled_errors: bool = False
+    stop_on_unhandled_errors: bool = False,
+    timeout_task_shutdown: float = 60
 ) -> None:
     """
     Start up the event loop, and wait for a signal to shut down.
@@ -168,6 +169,12 @@ def run(
         and the only way to stop it is to call `loop.stop()`. However, if
         this flag is set, any unhandled exceptions will stop the loop, and
         be re-raised after the normal shutdown sequence is completed.
+    :param timeout_task_shutdown: When shutdown is initiated, for example
+        by a signal like SIGTERM, or even by an unhandled exception if
+        ``stop_on_unhandled_errors`` is True, then the first action taken
+        during shutdown is to cancel all currently pending or running tasks
+        and then wait for them all to complete. This timeout sets an upper
+        limit on how long to wait.
     """
     _clear_signal_handlers()
     logger.debug("Entering run()")
@@ -283,7 +290,7 @@ def run(
                 loop.run_until_complete(shutdown_callback(loop))
             elif callable(shutdown_callback):
                 shutdown_callback(loop)
-            else:
+            else:  # pragma: no cover
                 raise TypeError(
                     "The provided shutdown_callback must be either a function,"
                     "an awaitable, or a coroutine object, but it was "
@@ -318,20 +325,70 @@ def run(
 
     tasks, do_not_cancel = sep()
 
-    async def wait_for_cancelled_tasks():
-        return await gather(*tasks, *do_not_cancel, return_exceptions=True)
+    async def wait_for_cancelled_tasks(timeout):
+        """ Wait for the cancelled tasks to finish up. They have received
+        CancelledError and must exit. However, it is possible that some
+        badly-behaved tasks catch CancelledError (or BaseException) and
+        then do not exit as they're supposed to. Thus, we only wait for
+        ``timeout`` and then return anyway.
+
+        To make it a bit easier to figure out when this is happening and
+        why, there is is a log message (WARNING level) that will show
+        the stack frames of all tasks that are still alive at the timeout.
+        This can be used to troubleshoot why those tasks did not exit.
+
+        Here is a sample of what the logs might look like (taken from one
+        of the tests.)
+
+        .. code-block::
+
+            <snip>
+            INFO:aiorun:Entering shutdown phase.
+            INFO:aiorun:Cancelling pending tasks.
+            DEBUG:aiorun:Cancelling task: \
+                <Task pending name='Task-2' coro=<test_stop_must_be_obeyed.<locals>.naughty_task() \
+                running at /home/caleb/Documents/repos/aiorun/tests/test_stop_on_errors.py:75> \
+                wait_for=<Future pending cb=[Task.task_wakeup()]>>
+            INFO:aiorun:Running pending tasks till complete
+            WARNING:aiorun:During shutdown, the following tasks were cancelled but refused to \
+                exit after 2.0 seconds: [<frame at 0x7f94484a3bc0, file \
+                '/home/caleb/Documents/repos/aiorun/tests/test_stop_on_errors.py', line 77, \
+                code naughty_task>]
+            INFO:aiorun:Waiting for executor shutdown.
+            INFO:aiorun:Shutting down async generators
+            INFO:aiorun:Closing the loop.
+            INFO:aiorun:Leaving. Bye!
+            INFO:aiorun:Reraising unhandled exception
+            <snip>
+
+        """
+        _, pending = await asyncio.wait([*tasks, *do_not_cancel], timeout=timeout)
+        tasks_info = '\n\n'.join(str(t.get_stack()) for t in pending)
+        msg = (
+            "During shutdown, the following tasks were cancelled but refused "
+            "to exit after {timeout} seconds: {tasks_info}".format(
+                timeout=timeout,
+                tasks_info=tasks_info
+            )
+        )
+
+        logger.warning(msg)
 
     if tasks or do_not_cancel:
         logger.info("Running pending tasks till complete")
         # TODO: obtain all the results, and log any results that are exceptions
         # other than CancelledError. Will be useful for troubleshooting.
-        loop.run_until_complete(wait_for_cancelled_tasks())
+        loop.run_until_complete(
+            wait_for_cancelled_tasks(
+                timeout=timeout_task_shutdown,
+            ),
+        )
 
     logger.info("Waiting for executor shutdown.")
     executor.shutdown(wait=True)
     # If loop was supplied, it's up to the caller to close!
     if not loop_was_supplied:
-        if sys.version_info >= (3, 6):
+        if sys.version_info >= (3, 6):  # pragma: no branch
             logger.info("Shutting down async generators")
             loop.run_until_complete(loop.shutdown_asyncgens())
         logger.info("Closing the loop.")

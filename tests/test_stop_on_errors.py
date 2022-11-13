@@ -63,3 +63,37 @@ def test_call_exception_handler(context, raised_exc):
         run(main(), stop_on_unhandled_errors=True)
 
     assert all(t.cancelled for t in created_tasks)
+
+
+def test_stop_must_be_obeyed(caplog):
+    """Basic SIGTERM"""
+
+    created_tasks = []
+
+    async def naughty_task():
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            await asyncio.sleep(10)
+
+    async def main():
+        # loop = asyncio.get_running_loop()
+        loop = asyncio.get_event_loop()
+        created_tasks.append(
+            loop.create_task(
+                naughty_task(),
+            )
+        )
+        await asyncio.sleep(0.01)
+        raise Exception("Stops the loop")
+
+    with pytest.raises(Exception) as excinfo:
+        run(main(), stop_on_unhandled_errors=True, timeout_task_shutdown=2.0)
+
+    print(excinfo.value)
+    print(excinfo.traceback)
+    assert "tasks were cancelled but refused to exit after 2.0 seconds" in caplog.text
+    assert "Stops the loop" in str(excinfo.value)
+    assert all(t.cancelled for t in created_tasks)
+
+
