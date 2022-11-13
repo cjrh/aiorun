@@ -366,7 +366,10 @@ def run(
         tasks_info = '\n\n'.join(str(t.get_stack()) for t in pending)
         msg = (
             "During shutdown, the following tasks were cancelled but refused "
-            f"to exit after {timeout} seconds: {tasks_info}"
+            "to exit after {timeout} seconds: {tasks_info}".format(
+                timeout=timeout,
+                tasks_info=tasks_info
+            )
         )
 
         logger.warning(msg)
