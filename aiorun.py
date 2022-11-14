@@ -363,16 +363,16 @@ def run(
 
         """
         _, pending = await asyncio.wait([*tasks, *do_not_cancel], timeout=timeout)
-        tasks_info = '\n\n'.join(str(t.get_stack()) for t in pending)
-        msg = (
-            "During shutdown, the following tasks were cancelled but refused "
-            "to exit after {timeout} seconds: {tasks_info}".format(
-                timeout=timeout,
-                tasks_info=tasks_info
+        if pending:
+            tasks_info = '\n\n'.join(str(t.get_stack()) for t in pending)
+            msg = (
+                "During shutdown, the following tasks were cancelled but refused "
+                "to exit after {timeout} seconds: {tasks_info}".format(
+                    timeout=timeout,
+                    tasks_info=tasks_info
+                )
             )
-        )
-
-        logger.warning(msg)
+            logger.warning(msg)
 
     if tasks or do_not_cancel:
         logger.info("Running pending tasks till complete")
