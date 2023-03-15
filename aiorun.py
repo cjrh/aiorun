@@ -306,24 +306,16 @@ def run(
             else:
                 pending_exception_to_raise = exc
 
-    def sep():
-        tasks = all_tasks(loop=loop)
-        do_not_cancel = set()
+    tasks = all_tasks(loop=loop)
+
+    if tasks:
+        logger.info("Cancelling pending tasks.")
         for t in tasks:
             # TODO: we don't need access to the coro. We could simply
             # TODO: store the task itself in the weakset.
-            if t._coro in _DO_NOT_CANCEL_COROS:
-                do_not_cancel.add(t)
-
-        tasks -= do_not_cancel
-
-        logger.info("Cancelling pending tasks.")
-        for t in tasks:
-            logger.debug("Cancelling task: %s", t)
-            t.cancel()
-        return tasks, do_not_cancel
-
-    tasks, do_not_cancel = sep()
+            if t._coro not in _DO_NOT_CANCEL_COROS:
+                logger.debug("Cancelling task: %s", t)
+                t.cancel()
 
     async def wait_for_cancelled_tasks(timeout):
         """ Wait for the cancelled tasks to finish up. They have received
@@ -362,11 +354,11 @@ def run(
             <snip>
 
         """
-        _, pending = await asyncio.wait([*tasks, *do_not_cancel], timeout=timeout)
+        _, pending = await asyncio.wait([*tasks], timeout=timeout)
         if pending:
             tasks_info = '\n\n'.join(str(t.get_stack()) for t in pending)
             msg = (
-                "During shutdown, the following tasks were cancelled but refused "
+                "During shutdown, the following tasks refused "
                 "to exit after {timeout} seconds: {tasks_info}".format(
                     timeout=timeout,
                     tasks_info=tasks_info
@@ -374,7 +366,7 @@ def run(
             )
             logger.warning(msg)
 
-    if tasks or do_not_cancel:
+    if tasks:
         logger.info("Running pending tasks till complete")
         # TODO: obtain all the results, and log any results that are exceptions
         # other than CancelledError. Will be useful for troubleshooting.
