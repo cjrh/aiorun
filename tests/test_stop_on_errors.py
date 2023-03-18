@@ -92,7 +92,7 @@ def test_stop_must_be_obeyed(caplog):
 
     print(excinfo.value)
     print(excinfo.traceback)
-    assert "tasks were cancelled but refused to exit after 2.0 seconds" in caplog.text
+    assert "tasks refused to exit after 2.0 seconds" in caplog.text
     assert "Stops the loop" in str(excinfo.value)
     assert all(t.cancelled for t in created_tasks)
 
