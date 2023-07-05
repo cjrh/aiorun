@@ -1,47 +1,29 @@
 """Boilerplate for asyncio applications"""
+import asyncio
+import contextlib
+import inspect
+import logging
 import signal
 import sys
-import logging
-import inspect
-import asyncio
-from asyncio import get_event_loop, AbstractEventLoop, Task, gather, CancelledError
+from asyncio import AbstractEventLoop, CancelledError, all_tasks, get_event_loop
 from concurrent.futures import Executor, ThreadPoolExecutor
-from typing import Optional, Callable, Union, Any
-
-try:  # pragma: no cover
-    # Coroutine only arrived in Python 3.5.3, and Ubuntu 16.04 is unfortunately
-    # stuck on 3.5.2 for the time being. Revisit this in a year.
-    from typing import Coroutine, Awaitable
-
-    ShutdownCallback = Optional[
-        Union[
-            Awaitable,
-            Callable[[AbstractEventLoop], Awaitable],
-            Callable[[AbstractEventLoop], None],
-        ]
-    ]
-
-except ImportError:  # pragma: no cover
-    Coroutine = Any
-    Awaitable = Any
-    ShutdownCallback = Any
-
-from weakref import WeakSet
 from functools import partial
+from typing import Awaitable, Callable, Coroutine, Optional, Union
+from weakref import WeakSet
+
+ShutdownCallback = Optional[
+    Union[
+        Awaitable,
+        Callable[[AbstractEventLoop], Awaitable],
+        Callable[[AbstractEventLoop], None],
+    ]
+]
 
 
 __all__ = ["run", "shutdown_waits_for"]
 __version__ = "2022.11.1"
 logger = logging.getLogger("aiorun")
 WINDOWS = sys.platform == "win32"
-
-try:
-    # asyncio.Task.all_tasks is deprecated in favour of asyncio.all_tasks
-    # in Python 3.7; remove ImportError handling when we drop support for
-    # 3.6.
-    from asyncio import all_tasks
-except ImportError:  # pragma: no cover
-    all_tasks = Task.all_tasks
 
 
 _DO_NOT_CANCEL_COROS = WeakSet()
@@ -233,10 +215,8 @@ def run(
             provide a coro, and instead creates their own with
             loop.create_task, that task might bubble
             a CancelledError into the run_until_complete()."""
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await coro
-            except asyncio.CancelledError:
-                pass
 
         loop.create_task(new_coro())
 
@@ -380,9 +360,8 @@ def run(
     executor.shutdown(wait=True)
     # If loop was supplied, it's up to the caller to close!
     if not loop_was_supplied:
-        if sys.version_info >= (3, 6):  # pragma: no branch
-            logger.info("Shutting down async generators")
-            loop.run_until_complete(loop.shutdown_asyncgens())
+        logger.info("Shutting down async generators")
+        loop.run_until_complete(loop.shutdown_asyncgens())
         logger.info("Closing the loop.")
         loop.close()
     logger.info("Leaving. Bye!")
