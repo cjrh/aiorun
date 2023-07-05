@@ -48,15 +48,21 @@ jobs:
       id: extract_branch
     - name: Upload coverage
       env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           COVERALLS_PARALLEL: "true"
       if: matrix.os == 'ubuntu-latest'
       run: |
-        coveralls
-    - name: Finish parallel coverage
-      env:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        coveralls --finish
+        coveralls --service=github
 
+  coveralls:
+    name: Indicate completion to coveralls.io
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Finished
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        pip3 install --upgrade coveralls
+        coveralls --service=github --finish
