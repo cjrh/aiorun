@@ -294,7 +294,6 @@ def run(
             # TODO: we don't need access to the coro. We could simply
             # TODO: store the task itself in the weakset.
             if t._coro not in _DO_NOT_CANCEL_COROS:
-                logger.debug("Cancelling task: %s", t)
                 t.cancel()
 
     async def wait_for_cancelled_tasks(timeout):
