@@ -21,7 +21,7 @@ ShutdownCallback = Optional[
 
 
 __all__ = ["run", "shutdown_waits_for"]
-__version__ = "2023.7.2"
+__version__ = "2024.5.1"
 logger = logging.getLogger("aiorun")
 WINDOWS = sys.platform == "win32"
 
