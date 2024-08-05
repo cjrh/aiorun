@@ -72,7 +72,7 @@ def shutdown_waits_for(coro, loop=None):
 
     new_coro = coro_proxy()  # We'll taskify this one instead of coro.
     _DO_NOT_CANCEL_COROS.add(new_coro)  # The new task must not be cancelled.
-    loop.create_task(new_coro)  # Make the task
+    _background_task = loop.create_task(new_coro)  # Make the task
 
     # Ok, so we *could* simply return fut.  Callers can await it as normal,
     # e.g.
