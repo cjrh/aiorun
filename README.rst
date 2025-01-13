@@ -17,7 +17,7 @@
     :target: https://pypi.org/project/aiorun/
 
 .. image:: https://img.shields.io/badge/calver-YYYY.MM.MINOR-22bfda.svg
-    :alt: This project uses calendar-based versioning scheme
+    :alt: This project uses a calendar-based versioning scheme
     :target: http://calver.org/
 
 .. image:: https://pepy.tech/badge/aiorun
@@ -59,9 +59,9 @@ call ``loop.stop()`` inside it: that will initiate shutdown.
     library's ``asyncio.run()`` helper. You can call `aiorun.run()`
     without a coroutine parameter, and it will still run forever.
 
-    This is surprising to many people, because they sometimes expect that
+    This is surprising to many people because they sometimes expect that
     unhandled exceptions should abort the program, with an exception and
-    a traceback. If you want this behaviour, please see the section on
+    a traceback. If you want this behavior, please see the section on
     *error handling* further down.
 
 .. warning::
@@ -69,15 +69,15 @@ call ``loop.stop()`` inside it: that will initiate shutdown.
     Note that `aiorun.run(coro)` will create a **new event loop instance**
     every time it is invoked (same as `asyncio.run`). This might cause
     confusing errors if your code interacts with the default event loop
-    instance provided by the stdlib `asyncio` library. For such situations
+    instance provided by the stdlib `asyncio` library. For such situations,
     you can provide the actual loop you're using with
     `aiorun.run(coro, loop=loop)`. There is more info about this further down.
 
-    However, generally speaking, configuring your own loop and providing
-    it in this way is a code smell. You will find it much easier to
+    However, generally speaking, configuring your loop and providing
+    in this way is a code smell. You will find it much easier to
     reason about your code if you do all your task creation *inside*
     an async context, such as within an `async def` function, because then
-    there will no ambiguity about which event loop is in play: it will
+    there will be no ambiguity about which event loop is in play: it will
     always be the one returned by `asyncio.get_running_loop()`.
 
 
@@ -88,7 +88,7 @@ The ``run()`` function will handle **everything** that normally needs
 to be done during the shutdown sequence of the application.  All you
 need to do is write your coroutines and run them.
 
-So what the heck does ``run()`` do exactly?? It does these standard,
+So what the heck does ``run()`` do exactly?? It does these standards,
 idiomatic actions for asyncio apps:
 
 - creates a ``Task`` for the given coroutine (schedules it on the
@@ -111,9 +111,9 @@ again. So, if you use ``aiorun`` this is what **you** need to remember:
   will have ``CancelledError`` raised internally. It's up to you whether
   you want to handle this inside each coroutine with
   a ``try/except`` or not.
-- If you want to protect coros from cancellation, see `shutdown_waits_for()`
+- If you want to protect corals from cancellation, see `shutdown_waits_for()`
   further down.
-- Try to have executor jobs be shortish, since the shutdown process will wait
+- Try to have executor jobs be shortish since the shutdown process will wait
   for them to finish. If you need a long-running thread or process tasks, use
   a dedicated thread/subprocess and set ``daemon=True`` instead.
 
@@ -209,10 +209,10 @@ automatically.
 Unlike the standard library's ``asyncio.run()`` method, ``aiorun.run``
 will run forever, and does not stop on unhandled exceptions. This is partly
 because we predate the standard library method, during the time in which
-``run_forever()`` was actually the recommended API for servers, and partly
+``run_forever()`` was the recommended API for servers, and partly
 because it can *make sense* for long-lived servers to be resilient to
 unhandled exceptions.  For example, if 99% of your API works fine, but the
-one new endpoint you just added has a bug: do you really want that one new
+one new endpoint you just added has a bug: do you want that one new
 endpoint to crash-loop your deployed service?
 
 Nevertheless, not all usages of ``aiorun`` are long-lived servers, so some
@@ -255,7 +255,7 @@ few scenarios where error-handling considerations can be more challenging.
 
 ``aiorun.run()`` can also be started without an initial coroutine, in which
 case any other created tasks still run as normal; in this case exceptions
-still abort the program if the parameter is supplied:
+still, abort the program if the parameter is supplied:
 
 .. code-block:: python
 
@@ -275,7 +275,7 @@ still abort the program if the parameter is supplied:
         run(loop=loop, stop_on_unhandled_errors=True)
 
 The output is the same as the previous program. In this second example,
-we made a our own loop instance and passed that to ``run()``. It is also possible
+we made our loop instance and passed that to ``run()``. It is also possible
 to configure your exception handler on the loop, but if you do this the
 ``stop_on_unhandled_errors`` parameter is no longer allowed:
 
@@ -313,8 +313,8 @@ But this is not allowed:
         RuntimeWarning: coroutine 'job' was never awaited
 
 Remember that the parameter ``stop_on_unhandled_errors`` is just a convenience. If you're
-going to go to the trouble of making your own loop instance anyway, you can
-stop the loop yourself inside your own exception handler just fine, and
+going to go to the trouble of making your loop instance anyway, you can
+stop the loop yourself inside your exception handler just fine, and
 then you no longer need to set ``stop_on_unhandled_errors``:
 
 .. code-block:: python
@@ -352,7 +352,7 @@ then you no longer need to set ``stop_on_unhandled_errors``:
 
 In this example, we schedule two jobs on the loop. One of them raises an
 exception, and you can see in the output that the other job was still
-cancelled during shutdown as expected (which is what you expect ``aiorun``
+canceled during shutdown as expected (which is what you expect ``aiorun``
 to do!):
 
 .. code-block::
@@ -409,7 +409,7 @@ it also receives a cancellation exception just like everything else.
 
 Therefore, we have an alternative version of ``shield()`` that works better for
 us: ``shutdown_waits_for()``. If you've got a coroutine that must **not** be
-cancelled during the shutdown sequence, just wrap it in
+canceled during the shutdown sequence, just wrap it in
 ``shutdown_waits_for()``!
 
 Here's an example:
@@ -433,7 +433,7 @@ Here's an example:
 
     run(main())
 
-If you hit ``CTRL-C`` *before* 10 seconds has passed, you will see
+If you hit ``CTRL-C`` or ``COMMAND-C`` *before* 10 seconds has passed, you will see
 ``oh noes!`` printed immediately, and then after 10 seconds (since start),
 ``done!`` is printed, and thereafter the program exits.
 
@@ -448,7 +448,7 @@ Output:
     3
     4
     ^CStopping the loop
-    oh noes!
+    oh, noes!
     5
     6
     7
@@ -456,7 +456,7 @@ Output:
     9
     done!
 
-Behind the scenes, ``all_tasks()`` would have been cancelled by ``CTRL-C``,
+Behind the scenes, ``all_tasks()`` would have been cancelled by ``CTRL-C`` or ``COMMAND-C``,
 *except* ones wrapped in ``shutdown_waits_for()`` calls.  In this respect, it
 is loosely similar to ``asyncio.shield()``, but with special applicability
 to our shutdown scenario in ``aiorun()``.
@@ -466,7 +466,7 @@ The main use case for this is short-lived tasks that you don't want to
 write explicit cancellation handling.
 
 Oh, and you can use ``shutdown_waits_for()`` as if it were ``asyncio.shield()``
-too. For that use-case it works the same.  If you're using ``aiorun``, there
+too. For that use case, it works the same.  If you're using ``aiorun``, there
 is no reason to use ``shield()``.
 
 🙏 Windows Support
@@ -481,18 +481,18 @@ For Linux, ``aiorun`` does "the right thing" out of the box for the
 a safe shutdown process as described earlier. However, on *Windows*, these
 signals don't work.
 
-There are two signals that work on Windows: the ``CTRL-C`` signal (happens
-when you press, unsurprisingly, ``CTRL-C``, and the ``CTRL-BREAK`` signal
+Two signals work on Windows: the ``CTRL-C`` or ``COMMAND-C`` signal (happens
+when you press, unsurprisingly, ``CTRL-C`` or ``COMMAND-C``, and the ``CTRL-BREAK`` or ``COMMAND-BREAK`` signal
 which happens when you...well, you get the picture.
 
-The good news is that, for ``aiorun``, both of these will work. Yay! The bad
+The good news is that for ``aiorun``, both of these will work. Yay! The bad
 news is that for them to work, you have to run your code in a Console
 window. Boo!
 
 Fortunately, it turns out that you can run an asyncio-based process *not*
 attached to a Console window, e.g. as a service or a subprocess, *and* have
 it also receive a signal to safely shut down in a controlled way. It turns
-out that it is possible to send a ``CTRL-BREAK`` signal to another process,
+out that it is possible to send a ``CTRL-BREAK`` or ``COMMAND-BREAK`` signal to another process,
 with no console window involved, but only as long as that process was created
 in a particular way and---here is the drop---this targetted process is a
 child process of the one sending the signal. Yeah, I know, it's a downer.
@@ -521,13 +521,13 @@ the ``pid``:
 
     os.kill(pid, signal.CTRL_BREAK_EVENT)
 
-(Remember, ``os.kill()`` doesn't actually kill, it only sends a signal)
+(Remember, ``os.kill()`` doesn't kill, it only sends a signal)
 
 ``aiorun`` supports this use-case above, although I'll be pretty surprised
-if anyone actually uses it to manage microservices (does anyone do this?)
+if anyone uses it to manage microservices (does anyone do this?)
 
 So to summarize: ``aiorun`` will do a controlled shutdown if either
-``CTRL-C`` or ``CTRL-BREAK`` is entered via keyboard in a Console window
+``CTRL-C`` or ``CTRL-BREAK``or ``COMMAND-C`` or ``COMMAND-BREAK`` is entered via the keyboard in a Console window
 with a running instance, or if the ``CTRL-BREAK`` signal is sent to
 a *subprocess* that was created with the ``CREATE_NEW_PROCESS_GROUP``
 flag set. `Here <https://stackoverflow.com/a/35792192>`_ is a much more
