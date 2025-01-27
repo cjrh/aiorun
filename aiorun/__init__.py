@@ -8,7 +8,7 @@ import sys
 from asyncio import AbstractEventLoop, CancelledError, all_tasks, get_event_loop
 from concurrent.futures import Executor, ThreadPoolExecutor
 from functools import partial
-from typing import Awaitable, Callable, Coroutine, Optional, Union
+from typing import Awaitable, Callable, Coroutine, Optional, Union, AbstractSet
 from weakref import WeakSet
 
 ShutdownCallback = Optional[
@@ -26,7 +26,8 @@ logger = logging.getLogger("aiorun")
 WINDOWS = sys.platform == "win32"
 
 
-_DO_NOT_CANCEL_COROS: WeakSet[Coroutine] = WeakSet()
+# TODO: when 3.8 is dropped, replace `AbstractSet` with `WeakSet`
+_DO_NOT_CANCEL_COROS: AbstractSet[Coroutine] = WeakSet()
 
 
 def shutdown_waits_for(coro, loop=None):
