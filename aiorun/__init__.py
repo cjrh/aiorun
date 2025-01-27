@@ -8,7 +8,7 @@ import sys
 from asyncio import AbstractEventLoop, CancelledError, all_tasks, get_event_loop
 from concurrent.futures import Executor, ThreadPoolExecutor
 from functools import partial
-from typing import Awaitable, Callable, Coroutine, Optional, Union
+from typing import Awaitable, Callable, Coroutine, Optional, Union, AbstractSet
 from weakref import WeakSet
 
 ShutdownCallback = Optional[
@@ -26,7 +26,8 @@ logger = logging.getLogger("aiorun")
 WINDOWS = sys.platform == "win32"
 
 
-_DO_NOT_CANCEL_COROS = WeakSet()
+# TODO: when 3.8 is dropped, replace `AbstractSet` with `WeakSet`
+_DO_NOT_CANCEL_COROS: AbstractSet[Coroutine] = WeakSet()
 
 
 def shutdown_waits_for(coro, loop=None):
@@ -170,7 +171,10 @@ def run(
 
     loop_was_supplied = bool(loop)
 
-    if not loop_was_supplied:
+    # If we check `loop_was_supplied` here, mypy will forever complain
+    # that `loop` might be None. So we have to check loop directly here
+    # to silence these incorrect mypy complaints. Yay for typing.
+    if not loop:
         if use_uvloop:
             import uvloop
 
@@ -293,7 +297,7 @@ def run(
         for t in tasks:
             # TODO: we don't need access to the coro. We could simply
             # TODO: store the task itself in the weakset.
-            if t._coro not in _DO_NOT_CANCEL_COROS:
+            if t._coro not in _DO_NOT_CANCEL_COROS:  # type: ignore
                 t.cancel()
 
     async def wait_for_cancelled_tasks(timeout):
