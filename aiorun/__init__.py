@@ -26,7 +26,7 @@ logger = logging.getLogger("aiorun")
 WINDOWS = sys.platform == "win32"
 
 
-_DO_NOT_CANCEL_COROS = WeakSet()
+_DO_NOT_CANCEL_COROS: WeakSet[Coroutine] = WeakSet()
 
 
 def shutdown_waits_for(coro, loop=None):
