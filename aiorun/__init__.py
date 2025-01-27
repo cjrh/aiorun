@@ -170,7 +170,10 @@ def run(
 
     loop_was_supplied = bool(loop)
 
-    if not loop_was_supplied:
+    # If we check `loop_was_supplied` here, mypy will forever complain
+    # that `loop` might be None. So we have to check loop directly here
+    # to silence these incorrect mypy complaints. Yay for typing.
+    if not loop:
         if use_uvloop:
             import uvloop
 
