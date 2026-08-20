@@ -2,11 +2,14 @@
 requires = ["flit_core >=4.0.2,<5"]
 build-backend = "flit_core.buildapi"
 
-[tool.flit.metadata]
-module = "aiorun"
-author = "Caleb Hattingh"
-author-email = "caleb.hattingh@gmail.com"
-home-page = "https://github.com/cjrh/aiorun"
+[project]
+name = "aiorun"
+authors = [
+    {name = "Caleb Hattingh", email = "caleb.hattingh@gmail.com"},
+]
+description = "Boilerplate for asyncio applications"
+readme = "README.rst"
+requires-python = ">=3.7"
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Natural Language :: English",
@@ -16,13 +19,15 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Operating System :: OS Independent"
-    ]
-description-file = "README.rst"
-requires-python = ">=3.7"
+    "Operating System :: OS Independent",
+]
+dynamic = ["version"]
 
-[tool.flit.metadata.requires-extra]
+[project.optional-dependencies]
 dev = [
     "pytest",
-    "pytest-cov"
+    "pytest-cov",
 ]
+
+[project.urls]
+Home = "https://github.com/cjrh/aiorun"
